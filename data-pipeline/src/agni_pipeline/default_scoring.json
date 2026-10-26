@@ -1,0 +1,31 @@
+{
+  "description": "Default AGNI-SCAN verification-priority heuristic. Weights are expert-set defaults, not fitted or validated. The score ranks cells for field verification; it is NOT a probability of burning.",
+  "min_evidence_completeness": 0.5,
+  "zero_detection_requires_independent_evidence": true,
+  "firms_filters": {
+    "min_confidence": "nominal",
+    "exclude_fire_types": [1, 2, 3]
+  },
+  "components": [
+    {
+      "name": "observed_detections",
+      "source": "firms_window",
+      "weight": 0.5,
+      "saturation_count": 5,
+      "description": "VIIRS detections in the analysis window; 5 or more saturates the component."
+    },
+    {
+      "name": "historical_detections",
+      "source": "firms_history",
+      "weight": 0.3,
+      "saturation_count": 20,
+      "description": "VIIRS detections in the supplied historical file (dates before the window); 20 or more saturates."
+    },
+    {
+      "name": "cropland_fraction",
+      "source": "cell_attribute",
+      "weight": 0.2,
+      "description": "Share of the cell under paddy/cropland (0-1), supplied per cell_id from an authoritative land-cover product."
+    }
+  ]
+}

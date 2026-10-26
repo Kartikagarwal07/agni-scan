@@ -1,0 +1,31 @@
+{
+  "type": "FeatureCollection",
+  "agni_scan_synthetic": true,
+  "description": "SYNTHETIC TEST FIXTURE. An invented polygon used only to exercise the pipeline. It is NOT the Punjab state boundary and must not be used as one.",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "SYNTHETIC TEST REGION (not Punjab)",
+        "synthetic": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [75.70, 30.75],
+            [75.855, 30.75],
+            [75.8625, 30.86],
+            [75.87, 30.75],
+            [76.00, 30.75],
+            [76.02, 30.90],
+            [75.95, 31.00],
+            [75.80, 31.02],
+            [75.72, 30.95],
+            [75.70, 30.75]
+          ]
+        ]
+      }
+    }
+  ]
+}
