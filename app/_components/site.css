@@ -1,0 +1,122 @@
+/* Shared site chrome: fixed header with the data notice and navigation. */
+
+.site-header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0));
+  pointer-events: none;
+}
+
+.site-header > * {
+  pointer-events: auto;
+}
+
+.site-notice {
+  margin: 0;
+  padding: 6px 16px;
+  font-family: var(--font-display), sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.site-notice_synthetic {
+  background: var(--warn);
+  color: #000;
+}
+
+.site-notice_unknown {
+  background: var(--danger);
+  color: #fff;
+}
+
+.site-notice_observed,
+.site-notice_pending {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 18px clamp(16px, 4vw, 48px);
+}
+
+.site-wordmark {
+  color: #fff;
+  font-family: var(--font-display), sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-decoration: none;
+}
+
+.site-links {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 3vw, 36px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-links a {
+  color: #fff;
+  font-family: var(--font-display), sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.site-sectionLink a {
+  opacity: 0.8;
+  transition: opacity 150ms;
+}
+
+.site-sectionLink a:hover {
+  opacity: 1;
+}
+
+.site-links .site-cta {
+  display: inline-block;
+  padding: 9px 18px;
+  border: 2px solid #fff;
+  transition: background 150ms, color 150ms;
+}
+
+.site-links .site-cta:hover,
+.site-links .site-cta[aria-current="page"] {
+  background: #fff;
+  color: #000;
+}
+
+.site-nav a:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+
+@media (max-width: 720px) {
+  .site-sectionLink,
+  .site-noticeDetail {
+    display: none;
+  }
+
+  .site-notice {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+
+  .site-wordmark {
+    font-size: 18px;
+    letter-spacing: 0.24em;
+  }
+}

@@ -1,11 +1,13 @@
-import { Dashboard } from "./_components/dashboard";
+import { Landing } from "./_components/landing/landing";
+import { SiteNav } from "./_components/site-nav";
 
-// The page shell is static; all data is fetched in the browser from the /api routes,
-// so the dashboard only ever shows what the API returns.
 export default function Home() {
   return (
-    <main>
-      <Dashboard />
-    </main>
+    <>
+      <SiteNav current="home" />
+      <main>
+        <Landing />
+      </main>
+    </>
   );
 }
