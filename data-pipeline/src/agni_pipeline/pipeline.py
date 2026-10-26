@@ -57,6 +57,8 @@ class PipelineInputs:
     cell_evidence_path: Path | None = None
     config_path: Path | None = None
     declare_synthetic: bool = False
+    # Omit the wall-clock timestamp so identical inputs give byte-identical output.
+    deterministic: bool = False
     allow_missing_districts: bool = False
     repair_geometry: bool = False
     strict: bool = False
@@ -247,7 +249,8 @@ def run_pipeline(inp: PipelineInputs) -> PipelineResult:
         "synthetic": synthetic,
         "disclaimer": SYNTHETIC_DISCLAIMER if synthetic else OBSERVED_DISCLAIMER,
         "interpretation": INTERPRETATION,
-        "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generated_at": None if inp.deterministic else dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "deterministic": inp.deterministic,
         "pipeline": {"name": "agni-pipeline", "version": __version__},
         "coordinate_reference_system": "EPSG:4326 (RFC 7946), positions are [longitude, latitude]",
         "analysis_window": {
@@ -316,13 +319,13 @@ def run_pipeline(inp: PipelineInputs) -> PipelineResult:
 
 def _write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
     with open(path, "w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer = csv.DictWriter(fh, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         for row in rows:
             writer.writerow({k: "" if v is None else v for k, v in row.items()})
 
 
-def write_outputs(result: PipelineResult, out_dir: str | Path) -> dict[str, Path]:
+def write_outputs(result: PipelineResult, out_dir: str | Path, indent: int | None = None) -> dict[str, Path]:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     paths = {
@@ -331,7 +334,7 @@ def write_outputs(result: PipelineResult, out_dir: str | Path) -> dict[str, Path
         "assignments": out / "detection_assignments.csv",
         "rejections": out / "rejected_rows.csv",
     }
-    write_geojson(paths["geojson"], result.collection)
+    write_geojson(paths["geojson"], result.collection, indent)
     if result.explanations:
         _write_csv(paths["explanations"], result.explanations, list(result.explanations[0]))
     assign_rows = [

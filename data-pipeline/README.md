@@ -41,41 +41,67 @@ pytest 8.4.2). Both shapely and pyproj ship Windows wheels, so you don't need GD
 python -m pytest
 ```
 
-Expected output: `117 passed`.
+Expected output: `120 passed`.
 
-## 3. Synthetic demo
+## 3. Deterministic demo grid
+
+[`demo/risk_grid.geojson`](demo/risk_grid.geojson) is a committed reference file that follows the
+contract. The backend and frontend can use it right away. It is built from the synthetic fixtures,
+and the same command always produces the same bytes:
+
+- There is no wall-clock timestamp (`metadata.generated_at` is `null` and `metadata.deterministic`
+  is `true`).
+- Metadata records input file names, not paths.
+- Key order is fixed, coordinates are rounded to 6 decimals, and files are UTF-8 with LF line
+  endings, enforced by [`.gitattributes`](.gitattributes).
+
+It contains 48 cells: one each of `high` (76) and `medium` (56), 42 `low`, and 4 `unknown`
+(`risk_score: null`). Districts are `SYNTHETIC-DISTRICT-WEST` and `SYNTHETIC-DISTRICT-EAST`, and
+every ID starts with `SYNTH-PB-`.
 
 ```powershell
-python -m agni_pipeline demo            # writes to .\output\demo
-python -m agni_pipeline validate .\output\demo\risk_grid.geojson
+python -m agni_pipeline demo --check                  # committed file == fresh run, and contract-valid
+python -m agni_pipeline validate .\demo\risk_grid.geojson
+python -m agni_pipeline demo --output-dir .\demo      # regenerate after an intentional change
+python -m agni_pipeline demo                          # scratch copy in .\output\demo
 ```
 
-Expected output:
+Expected output of `demo --output-dir .\demo`:
 
 ```text
 [SYNTHETIC DEMONSTRATION DATA - NOT REAL SATELLITE EVIDENCE]
 Analysis window : 2026-10-20 .. 2026-10-26 (7 days, UTC acq_date)
 Grid cells      : 48 x 5000 m (EPSG:32643)
 Detections      : 10 in window, 9 assigned, 1 outside region, 0 rows rejected
-Risk levels     : high=1, medium=0, low=47, unknown=0
+Risk levels     : high=1, medium=1, low=42, unknown=4
 Contract check  : PASSED (docs/DATA_CONTRACT.md v1.0.0)
-  geojson      output\demo\risk_grid.geojson
-  explanations output\demo\score_explanations.csv
-  assignments  output\demo\detection_assignments.csv
-  rejections   output\demo\rejected_rows.csv
-output\demo\risk_grid.geojson: conforms to docs/DATA_CONTRACT.md (48 features)
+  geojson      demo\risk_grid.geojson
+  explanations demo\score_explanations.csv
+  assignments  demo\detection_assignments.csv
+  rejections   demo\rejected_rows.csv
 ```
 
-To see `unknown` cells, run on the window file alone, with no history and no cell evidence. Every
-cell with zero detections then lacks independent evidence and gets `risk_score: null`:
+**Validation approach.** Every run validates its own output against `DATA_CONTRACT.md` before
+writing anything, and fails (exit code 1) on any violation. These are the checks:
 
-```powershell
-python -m agni_pipeline run `
-  --firms .\fixtures\synthetic\synthetic_firms_viirs_window.csv `
-  --boundary .\fixtures\synthetic\synthetic_state_boundary.geojson `
-  --districts .\fixtures\synthetic\synthetic_districts.geojson `
-  --analysis-date 2026-10-26 --output-dir .\output\demo-window-only
-```
+- **Rules 1–4:** Polygon only; closed rings with at least 4 positions; `Feature.id` equals
+  `cell_id`; `[longitude, latitude]` order, checked against the Punjab envelope.
+- **Properties:** exactly the 8 contract properties, each with its type and range.
+- **Score and level:** `risk_level` must match `risk_score` under the contract thresholds, and a
+  missing score must be `null`.
+- **Uniqueness:** no duplicate `cell_id`.
+- **Labeling (rule 7):** a provenance label is required, and synthetic output must have the
+  `SYNTH-` prefix and a disclaimer.
+
+The same checks run standalone through `agni-pipeline validate <file>`. Add
+`--no-require-metadata` for files without the metadata block, such as the backend's `DEMO_GRID`. On
+top of that, `demo --check` guards against drift: the pytest suite fails if the committed demo no
+longer matches a fresh run.
+
+The demo does not use the historical FIRMS fixture. That leaves zero-detection cells without a
+cropland value with no independent evidence, which shows how `unknown` is produced. Add
+`--history-firms .\fixtures\synthetic\synthetic_firms_viirs_history.csv` to a `run` command to see
+the historical component.
 
 ## 4. Running on real data
 
@@ -229,6 +255,7 @@ data-pipeline/
     cli.py          `agni-pipeline run | demo | validate`
     default_scoring.json
   fixtures/synthetic/   SYNTHETIC test inputs (not real data)
+  demo/                 committed deterministic demo output (SYNTHETIC)
   tests/                pytest suite
 ```
 

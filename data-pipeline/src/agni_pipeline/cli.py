@@ -8,11 +8,15 @@ import json
 import sys
 from pathlib import Path
 
-from .contract import validate_feature_collection
+from .contract import serialize_geojson, validate_feature_collection
 from .errors import ContractViolationError, PipelineError
 from .pipeline import PipelineInputs, PipelineResult, run_pipeline, write_outputs
 
-FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "synthetic"
+PIPELINE_ROOT = Path(__file__).resolve().parents[2]
+FIXTURES = PIPELINE_ROOT / "fixtures" / "synthetic"
+REFERENCE_DEMO = PIPELINE_ROOT / "demo"
+# The committed demo is indented so reviewers can read diffs of it.
+DEMO_INDENT = 2
 
 
 def _date(text: str) -> dt.date:
@@ -92,12 +96,16 @@ def _cmd_run(args) -> int:
     return 0
 
 
-def _cmd_demo(args) -> int:
+def demo_inputs() -> PipelineInputs:
+    """Fixed inputs for the deterministic demo grid committed under demo/.
+
+    No historical file is used, so cells with zero detections and no cropland
+    value show up as risk_level "unknown", and all four levels appear.
+    """
     if not FIXTURES.is_dir():
         raise PipelineError(f"synthetic fixtures not found at {FIXTURES}")
-    inputs = PipelineInputs(
+    return PipelineInputs(
         firms_paths=[FIXTURES / "synthetic_firms_viirs_window.csv"],
-        history_paths=[FIXTURES / "synthetic_firms_viirs_history.csv"],
         boundary_path=FIXTURES / "synthetic_state_boundary.geojson",
         districts_path=FIXTURES / "synthetic_districts.geojson",
         district_name_field="district",
@@ -106,9 +114,23 @@ def _cmd_demo(args) -> int:
         window_days=7,
         cell_size_m=5000,
         declare_synthetic=True,
+        deterministic=True,
     )
-    result = run_pipeline(inputs)
-    _report(result, write_outputs(result, args.output_dir))
+
+
+def _cmd_demo(args) -> int:
+    result = run_pipeline(demo_inputs())
+    if args.check:
+        reference = REFERENCE_DEMO / "risk_grid.geojson"
+        if not reference.is_file():
+            raise PipelineError(f"reference demo not found at {reference}; run `agni-pipeline demo --output-dir demo`")
+        if reference.read_bytes() != serialize_geojson(result.collection, DEMO_INDENT).encode("utf-8"):
+            raise PipelineError(
+                f"{reference} is out of date with the pipeline; regenerate it with `agni-pipeline demo --output-dir demo`"
+            )
+        print(f"{reference}: matches a fresh deterministic run and conforms to docs/DATA_CONTRACT.md")
+        return 0
+    _report(result, write_outputs(result, args.output_dir, DEMO_INDENT))
     return 0
 
 
@@ -140,8 +162,10 @@ def build_parser() -> argparse.ArgumentParser:
     _add_run_args(run)
     run.set_defaults(func=_cmd_run)
 
-    demo = sub.add_parser("demo", help="run on the bundled SYNTHETIC fixtures (not real data)")
+    demo = sub.add_parser("demo", help="deterministic run on the bundled SYNTHETIC fixtures (not real data)")
     demo.add_argument("--output-dir", type=Path, default=Path("output") / "demo")
+    demo.add_argument("--check", action="store_true",
+                      help="verify the committed demo/risk_grid.geojson equals a fresh run, byte for byte")
     demo.set_defaults(func=_cmd_demo)
 
     val = sub.add_parser("validate", help="check a GeoJSON file against docs/DATA_CONTRACT.md")

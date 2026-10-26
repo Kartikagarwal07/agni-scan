@@ -70,12 +70,17 @@ def build_feature_collection(features: list[dict], metadata: dict) -> dict:
     return {"type": "FeatureCollection", "metadata": metadata, "features": features}
 
 
-def write_geojson(path: str | Path, collection: dict) -> None:
+def serialize_geojson(collection: dict, indent: int | None = None) -> str:
+    """Stable text form: insertion-ordered keys, UTF-8, LF line endings, trailing newline."""
+    separators = (",", ":") if indent is None else (",", ": ")
+    return json.dumps(collection, ensure_ascii=False, indent=indent, separators=separators) + "\n"
+
+
+def write_geojson(path: str | Path, collection: dict, indent: int | None = None) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
-        json.dump(collection, fh, ensure_ascii=False, separators=(",", ":"))
-        fh.write("\n")
+        fh.write(serialize_geojson(collection, indent))
 
 
 def _is_number(v) -> bool:

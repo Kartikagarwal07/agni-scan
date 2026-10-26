@@ -309,3 +309,39 @@ def test_cli_validate_reports_violations(tmp_path, capsys):
     path.write_text(json.dumps({"type": "FeatureCollection", "features": [{"type": "Feature"}]}))
     assert main(["validate", str(path)]) == 1
     assert "violates DATA_CONTRACT.md" in capsys.readouterr().err
+
+
+# --- deterministic reference demo (demo/risk_grid.geojson) -------------------------------------
+
+
+def test_committed_reference_demo_is_current_and_valid():
+    from agni_pipeline.cli import DEMO_INDENT, REFERENCE_DEMO, demo_inputs
+    from agni_pipeline.contract import serialize_geojson
+
+    reference = REFERENCE_DEMO / "risk_grid.geojson"
+    fresh = serialize_geojson(run_pipeline(demo_inputs()).collection, DEMO_INDENT)
+    assert reference.read_bytes() == fresh.encode("utf-8"), "run `agni-pipeline demo --output-dir demo`"
+    fc = json.loads(fresh)
+    assert validate_feature_collection(fc) == []
+    assert fc["metadata"]["deterministic"] is True and fc["metadata"]["generated_at"] is None
+    assert fc["metadata"]["synthetic"] is True
+    levels = {f["properties"]["risk_level"] for f in fc["features"]}
+    assert levels == {"low", "medium", "high", "unknown"}
+
+
+def test_non_deterministic_runs_record_a_timestamp(demo_result):
+    assert demo_result.metadata["deterministic"] is False
+    assert demo_result.metadata["generated_at"].endswith("Z")
+
+
+def test_demo_check_detects_stale_reference(tmp_path, monkeypatch, capsys):
+    import agni_pipeline.cli as cli
+
+    monkeypatch.setattr(cli, "REFERENCE_DEMO", tmp_path)
+    assert main(["demo", "--check"]) == 1
+    assert "reference demo not found" in capsys.readouterr().err
+    assert main(["demo", "--output-dir", str(tmp_path)]) == 0
+    assert main(["demo", "--check"]) == 0
+    (tmp_path / "risk_grid.geojson").write_text("{}\n")
+    assert main(["demo", "--check"]) == 1
+    assert "out of date" in capsys.readouterr().err
