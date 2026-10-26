@@ -2,6 +2,17 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+## Demo API
+
+The backend implements the shared API and data contracts in `docs/`. The grid is
+deterministic **mock data**, not satellite results or validated burning estimates.
+
+`POST /api/inspections` uses in-memory demo storage, so records reset when the
+server restarts. In production it requires an `x-agni-scan-write-token` header
+matching the server-only `AGNI_SCAN_WRITE_TOKEN` environment variable. Do not
+deploy the demo write store publicly; replace it with authenticated persistent
+storage first.
+
 First, run the development server:
 
 ```bash
@@ -13,6 +24,8 @@ pnpm dev
 # or
 bun dev
 ```
+
+Run API validation tests with `npm test`.
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
