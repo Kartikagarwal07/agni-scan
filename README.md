@@ -4,8 +4,10 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Demo API
 
-The backend implements the shared API and data contracts in `docs/`. The grid is
-deterministic **mock data**, not satellite results or validated burning estimates.
+The backend implements the shared API and data contracts in `docs/`. `GET /api/grid`
+serves the deterministic synthetic grid generated in `data-pipeline/demo/`, including
+its provenance metadata and safety disclaimer. It is not satellite data, Punjab
+geography, or a validated burning estimate.
 
 `POST /api/inspections` uses in-memory demo storage, so records reset when the
 server restarts. In production it requires an `x-agni-scan-write-token` header

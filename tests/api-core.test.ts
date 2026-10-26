@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEMO_GRID, gridFor, parseInspection, parsePagination, RequestValidationError } from "../lib/api-core.ts";
+import { GRID_METADATA, gridFor, parseInspection, parsePagination, RequestValidationError, RISK_GRID } from "../lib/api-core.ts";
 
-test("demo grid conforms to the shared feature invariants", () => {
-  assert.ok(DEMO_GRID.length > 0);
-  for (const feature of DEMO_GRID) {
+test("synthetic pipeline grid preserves provenance and shared feature invariants", () => {
+  assert.equal(GRID_METADATA.synthetic, true);
+  assert.equal(GRID_METADATA.data_provenance, "SYNTHETIC_DEMONSTRATION_NOT_REAL_SATELLITE_DATA");
+  assert.ok(RISK_GRID.features.length > 0);
+  for (const feature of RISK_GRID.features) {
     assert.equal(feature.id, feature.properties.cell_id);
     assert.equal(feature.geometry.type, "Polygon");
     const ring = feature.geometry.coordinates[0];
@@ -13,15 +15,17 @@ test("demo grid conforms to the shared feature invariants", () => {
 });
 
 test("grid filters and priority pagination use contract query parameters", () => {
-  assert.deepEqual(gridFor(new URLSearchParams("district=Ludhiana")).map((cell) => cell.id), ["PB-001", "PB-002"]);
+  assert.equal(gridFor(new URLSearchParams("district=SYNTHETIC-DISTRICT-WEST")).length, 22);
+  assert.equal(gridFor(new URLSearchParams("risk_level=high")).length, 1);
   assert.deepEqual(parsePagination(new URLSearchParams("limit=1&offset=2")), { limit: 1, offset: 2 });
   assert.throws(() => parsePagination(new URLSearchParams("limit=101")), RequestValidationError);
 });
 
-test("inspection validation accepts only a real cell and allowed result", () => {
-  assert.deepEqual(parseInspection({ cell_id: "PB-001", result: "inconclusive", notes: "  Demo field check  " }), {
-    cell_id: "PB-001", result: "inconclusive", notes: "Demo field check",
+test("inspection validation accepts only a pipeline cell and allowed result", () => {
+  const cellId = RISK_GRID.features[0].properties.cell_id;
+  assert.deepEqual(parseInspection({ cell_id: cellId, result: "inconclusive", notes: "  Demo field check  " }), {
+    cell_id: cellId, result: "inconclusive", notes: "Demo field check",
   });
-  assert.throws(() => parseInspection({ cell_id: "PB-999", result: "inconclusive", notes: "No cell" }), RequestValidationError);
-  assert.throws(() => parseInspection({ cell_id: "PB-001", result: "other", notes: "No" }), RequestValidationError);
+  assert.throws(() => parseInspection({ cell_id: "SYNTH-PB-999", result: "inconclusive", notes: "No cell" }), RequestValidationError);
+  assert.throws(() => parseInspection({ cell_id: cellId, result: "other", notes: "No" }), RequestValidationError);
 });
