@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { DEMO_GRID, parsePagination, RequestValidationError, validationError } from "@/lib/api-core";
+import { parsePagination, RequestValidationError, RISK_GRID, validationError } from "@/lib/api-core";
 
 export function GET(request: NextRequest) {
   try {
     const { limit, offset } = parsePagination(request.nextUrl.searchParams);
     const district = request.nextUrl.searchParams.get("district");
-    const items = DEMO_GRID
+    const items = RISK_GRID.features
       .filter((cell) => district === null || cell.properties.district === district)
       .map(({ properties }) => ({
         cell_id: properties.cell_id,
