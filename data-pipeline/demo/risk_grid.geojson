@@ -1,0 +1,2131 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "contract_version": "1.0.0",
+    "data_provenance": "SYNTHETIC_DEMONSTRATION_NOT_REAL_SATELLITE_DATA",
+    "synthetic": true,
+    "disclaimer": "SYNTHETIC DEMONSTRATION OUTPUT. Generated from fabricated test fixtures. These are NOT real satellite observations, NOT real Punjab boundaries and NOT real district data. Do not use for enforcement, reporting or any operational decision.",
+    "interpretation": "risk_score is a heuristic verification-priority score for scheduling field checks; it is NOT a probability of burning or of undetected fire. observed_fire_count counts satellite detections only. Zero detections do not prove zero burning: cloud or smoke cover, overpass timing and small or short-lived fires all cause missed detections. risk_score is null (risk_level 'unknown') when the available evidence is insufficient.",
+    "generated_at": null,
+    "deterministic": true,
+    "pipeline": {
+      "name": "agni-pipeline",
+      "version": "0.1.0"
+    },
+    "coordinate_reference_system": "EPSG:4326 (RFC 7946), positions are [longitude, latitude]",
+    "analysis_window": {
+      "start_date": "2026-10-20",
+      "end_date": "2026-10-26",
+      "days": 7,
+      "date_basis": "FIRMS acq_date (UTC)"
+    },
+    "grid": {
+      "projected_crs": "EPSG:32643",
+      "cell_size_m": 5000,
+      "origin_m": [
+        0,
+        0
+      ],
+      "cell_id_format": "SYNTH-PB-<size>M-N<floor(northing/size)>-E<floor(easting/size)>[-P<part>]",
+      "cell_count": 48,
+      "dropped_sliver_parts": 0,
+      "assignment_rule": "pixel centre, half-open cells [x0,x0+size) x [y0,y0+size) in the projected CRS; each detection counted at most once"
+    },
+    "district_attribution": {
+      "method": "district with the largest area overlap with the cell",
+      "source": "synthetic_districts.geojson",
+      "name_field": "district",
+      "cells_without_district": 0
+    },
+    "verification_status_note": "All cells are emitted as 'unverified'; field verification is recorded by the backend.",
+    "inputs": {
+      "state_boundary": {
+        "file": "synthetic_state_boundary.geojson",
+        "sha256": "78a7c98dd221e127f7f26e5cb44c301a27da4484936dd55bcf2c8513864a748d",
+        "synthetic": true,
+        "area_km2": 757.3
+      },
+      "district_boundaries": {
+        "file": "synthetic_districts.geojson",
+        "sha256": "3e65d845bba283410930a5987d64ebbb59e405149eed3df500e3ced2b9774caf",
+        "synthetic": true,
+        "district_count": 2
+      },
+      "firms_window": [
+        {
+          "file": "synthetic_firms_viirs_window.csv",
+          "sha256": "9cfbcd7c9490c56c56ee59de76d523fdc5d132afae92892a272dfe19a247a32a",
+          "rows": 13,
+          "valid_rows": 13,
+          "rejected_rows": 0,
+          "synthetic": true,
+          "acq_date_range": [
+            "2026-10-15",
+            "2026-10-26"
+          ]
+        }
+      ],
+      "firms_history": [],
+      "cell_evidence": {
+        "file": "synthetic_cell_evidence.csv",
+        "sha256": "ab31dfef9ad21ca83af001cd562365cc89269e06d0703557dba04f75a41af9f7",
+        "synthetic": true,
+        "columns": [
+          "cropland_fraction"
+        ]
+      }
+    },
+    "detections": {
+      "valid_unique": 12,
+      "duplicates_removed": 1,
+      "removed_by_quality_filters": {
+        "confidence_below_nominal": 1
+      },
+      "outside_analysis_window": 1,
+      "in_window": 10,
+      "assigned_to_cells": 9,
+      "outside_region": 1,
+      "in_dropped_sliver": 0,
+      "historical_used": null,
+      "historical_duplicates_removed": null,
+      "rejected_rows": 0
+    },
+    "scoring": {
+      "config_source": "built-in default (agni_pipeline/default_scoring.json)",
+      "min_evidence_completeness": 0.5,
+      "zero_detection_requires_independent_evidence": true,
+      "firms_min_confidence": "nominal",
+      "firms_excluded_fire_types": [
+        1,
+        2,
+        3
+      ],
+      "risk_level_thresholds": {
+        "low": "0-39",
+        "medium": "40-69",
+        "high": "70-100",
+        "unknown": "risk_score is null"
+      },
+      "components": [
+        {
+          "name": "observed_detections",
+          "source": "firms_window",
+          "weight": 0.5,
+          "saturation_count": 5,
+          "description": "VIIRS detections in the analysis window; 5 or more saturates the component."
+        },
+        {
+          "name": "historical_detections",
+          "source": "firms_history",
+          "weight": 0.3,
+          "saturation_count": 20,
+          "description": "VIIRS detections in the supplied historical file (dates before the window); 20 or more saturates."
+        },
+        {
+          "name": "cropland_fraction",
+          "source": "cell_attribute",
+          "weight": 0.2,
+          "description": "Share of the cell under paddy/cropland (0-1), supplied per cell_id from an authoritative land-cover product."
+        }
+      ]
+    },
+    "risk_level_counts": {
+      "high": 1,
+      "medium": 1,
+      "low": 42,
+      "unknown": 4
+    },
+    "contract_deviations": [],
+    "warnings": []
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00686-E00114",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.785618,
+              31.001202
+            ],
+            [
+              75.785669,
+              31.007472
+            ],
+            [
+              75.778548,
+              31.001245
+            ],
+            [
+              75.785618,
+              31.001202
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00686-E00114",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 13,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00686-E00115",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.837988,
+              31.000873
+            ],
+            [
+              75.838111,
+              31.014936
+            ],
+            [
+              75.8,
+              31.02
+            ],
+            [
+              75.785669,
+              31.007472
+            ],
+            [
+              75.785618,
+              31.001202
+            ],
+            [
+              75.837988,
+              31.000873
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00686-E00115",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": null,
+        "risk_level": "unknown",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.5,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00686-E00116",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.890357,
+              31.000522
+            ],
+            [
+              75.890426,
+              31.007965
+            ],
+            [
+              75.838111,
+              31.014936
+            ],
+            [
+              75.837988,
+              31.000873
+            ],
+            [
+              75.890357,
+              31.000522
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00686-E00116",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 1,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00686-E00117",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.942725,
+              31.000151
+            ],
+            [
+              75.942733,
+              31.000973
+            ],
+            [
+              75.890426,
+              31.007965
+            ],
+            [
+              75.890357,
+              31.000522
+            ],
+            [
+              75.942725,
+              31.000151
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00686-E00117",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 10,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00686-E00118",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.942725,
+              31.000151
+            ],
+            [
+              75.949231,
+              31.000103
+            ],
+            [
+              75.942733,
+              31.000973
+            ],
+            [
+              75.942725,
+              31.000151
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00686-E00118",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 19,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00685-E00113",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.732902,
+              30.956398
+            ],
+            [
+              75.73294,
+              30.961333
+            ],
+            [
+              75.72734,
+              30.956429
+            ],
+            [
+              75.732902,
+              30.956398
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00685-E00113",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 13,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00685-E00114",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.785618,
+              31.001202
+            ],
+            [
+              75.778548,
+              31.001245
+            ],
+            [
+              75.73294,
+              30.961333
+            ],
+            [
+              75.732902,
+              30.956398
+            ],
+            [
+              75.785248,
+              30.95609
+            ],
+            [
+              75.785618,
+              31.001202
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00685-E00114",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 21,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00685-E00115",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.837594,
+              30.955761
+            ],
+            [
+              75.837988,
+              31.000873
+            ],
+            [
+              75.785618,
+              31.001202
+            ],
+            [
+              75.785248,
+              30.95609
+            ],
+            [
+              75.837594,
+              30.955761
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00685-E00115",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 1,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00685-E00116",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.889938,
+              30.955412
+            ],
+            [
+              75.890357,
+              31.000522
+            ],
+            [
+              75.837988,
+              31.000873
+            ],
+            [
+              75.837594,
+              30.955761
+            ],
+            [
+              75.889938,
+              30.955412
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00685-E00116",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 20,
+        "risk_level": "low",
+        "observed_fire_count": 1,
+        "evidence_completeness": 0.5,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00685-E00117",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.942281,
+              30.955041
+            ],
+            [
+              75.942725,
+              31.000151
+            ],
+            [
+              75.890357,
+              31.000522
+            ],
+            [
+              75.889938,
+              30.955412
+            ],
+            [
+              75.942281,
+              30.955041
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00685-E00117",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 19,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00685-E00118",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.942281,
+              30.955041
+            ],
+            [
+              75.981698,
+              30.954747
+            ],
+            [
+              75.95,
+              31.0
+            ],
+            [
+              75.949231,
+              31.000103
+            ],
+            [
+              75.942725,
+              31.000151
+            ],
+            [
+              75.942281,
+              30.955041
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00685-E00118",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 27,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00684-E00113",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.732902,
+              30.956398
+            ],
+            [
+              75.72734,
+              30.956429
+            ],
+            [
+              75.72,
+              30.95
+            ],
+            [
+              75.71613,
+              30.911377
+            ],
+            [
+              75.732558,
+              30.911285
+            ],
+            [
+              75.732902,
+              30.956398
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00684-E00113",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 21,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00684-E00114",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.78488,
+              30.910978
+            ],
+            [
+              75.785248,
+              30.95609
+            ],
+            [
+              75.732902,
+              30.956398
+            ],
+            [
+              75.732558,
+              30.911285
+            ],
+            [
+              75.78488,
+              30.910978
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00684-E00114",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 1,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00684-E00115",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.8372,
+              30.91065
+            ],
+            [
+              75.837594,
+              30.955761
+            ],
+            [
+              75.785248,
+              30.95609
+            ],
+            [
+              75.78488,
+              30.910978
+            ],
+            [
+              75.8372,
+              30.91065
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00684-E00115",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 10,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00684-E00116",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.88952,
+              30.9103
+            ],
+            [
+              75.889938,
+              30.955412
+            ],
+            [
+              75.837594,
+              30.955761
+            ],
+            [
+              75.8372,
+              30.91065
+            ],
+            [
+              75.88952,
+              30.9103
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00684-E00116",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 19,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00684-E00117",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.941839,
+              30.90993
+            ],
+            [
+              75.942281,
+              30.955041
+            ],
+            [
+              75.889938,
+              30.955412
+            ],
+            [
+              75.88952,
+              30.9103
+            ],
+            [
+              75.941839,
+              30.90993
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00684-E00117",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": null,
+        "risk_level": "unknown",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.5,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00684-E00118",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.994157,
+              30.909539
+            ],
+            [
+              75.994436,
+              30.936547
+            ],
+            [
+              75.981698,
+              30.954747
+            ],
+            [
+              75.942281,
+              30.955041
+            ],
+            [
+              75.941839,
+              30.90993
+            ],
+            [
+              75.994157,
+              30.909539
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00684-E00118",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 7,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00684-E00119",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.994157,
+              30.909539
+            ],
+            [
+              76.013435,
+              30.909389
+            ],
+            [
+              75.994436,
+              30.936547
+            ],
+            [
+              75.994157,
+              30.909539
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00684-E00119",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 16,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00683-E00113",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.732558,
+              30.911285
+            ],
+            [
+              75.71613,
+              30.911377
+            ],
+            [
+              75.711617,
+              30.866286
+            ],
+            [
+              75.732215,
+              30.866171
+            ],
+            [
+              75.732558,
+              30.911285
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00683-E00113",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 1,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00683-E00114",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.784512,
+              30.865865
+            ],
+            [
+              75.78488,
+              30.910978
+            ],
+            [
+              75.732558,
+              30.911285
+            ],
+            [
+              75.732215,
+              30.866171
+            ],
+            [
+              75.784512,
+              30.865865
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00683-E00114",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 56,
+        "risk_level": "medium",
+        "observed_fire_count": 2,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00683-E00115",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.836808,
+              30.865538
+            ],
+            [
+              75.8372,
+              30.91065
+            ],
+            [
+              75.78488,
+              30.910978
+            ],
+            [
+              75.784512,
+              30.865865
+            ],
+            [
+              75.836808,
+              30.865538
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00683-E00115",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 19,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00683-E00116",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.889103,
+              30.865189
+            ],
+            [
+              75.88952,
+              30.9103
+            ],
+            [
+              75.8372,
+              30.91065
+            ],
+            [
+              75.836808,
+              30.865538
+            ],
+            [
+              75.889103,
+              30.865189
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00683-E00116",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 27,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00683-E00117",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.941398,
+              30.864819
+            ],
+            [
+              75.941839,
+              30.90993
+            ],
+            [
+              75.88952,
+              30.9103
+            ],
+            [
+              75.889103,
+              30.865189
+            ],
+            [
+              75.941398,
+              30.864819
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00683-E00117",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 7,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00683-E00118",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.993691,
+              30.864428
+            ],
+            [
+              75.994157,
+              30.909539
+            ],
+            [
+              75.941839,
+              30.90993
+            ],
+            [
+              75.941398,
+              30.864819
+            ],
+            [
+              75.993691,
+              30.864428
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00683-E00118",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": null,
+        "risk_level": "unknown",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.5,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00683-E00119",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.993691,
+              30.864428
+            ],
+            [
+              76.015228,
+              30.864261
+            ],
+            [
+              76.02,
+              30.9
+            ],
+            [
+              76.013435,
+              30.909389
+            ],
+            [
+              75.994157,
+              30.909539
+            ],
+            [
+              75.993691,
+              30.864428
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00683-E00119",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 24,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00682-E00113",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.732215,
+              30.866171
+            ],
+            [
+              75.711617,
+              30.866286
+            ],
+            [
+              75.707109,
+              30.821195
+            ],
+            [
+              75.731872,
+              30.821058
+            ],
+            [
+              75.732215,
+              30.866171
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00682-E00113",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 10,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00682-E00114",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.784145,
+              30.820752
+            ],
+            [
+              75.784512,
+              30.865865
+            ],
+            [
+              75.732215,
+              30.866171
+            ],
+            [
+              75.731872,
+              30.821058
+            ],
+            [
+              75.784145,
+              30.820752
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00682-E00114",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 19,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00682-E00115",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.836417,
+              30.820425
+            ],
+            [
+              75.836808,
+              30.865538
+            ],
+            [
+              75.784512,
+              30.865865
+            ],
+            [
+              75.784145,
+              30.820752
+            ],
+            [
+              75.836417,
+              30.820425
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00682-E00115",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 27,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00682-E00116",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.836417,
+              30.820425
+            ],
+            [
+              75.859789,
+              30.820272
+            ],
+            [
+              75.8625,
+              30.86
+            ],
+            [
+              75.865213,
+              30.820236
+            ],
+            [
+              75.888688,
+              30.820077
+            ],
+            [
+              75.889103,
+              30.865189
+            ],
+            [
+              75.836808,
+              30.865538
+            ],
+            [
+              75.836417,
+              30.820425
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00682-E00116",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 7,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00682-E00117",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.940957,
+              30.819708
+            ],
+            [
+              75.941398,
+              30.864819
+            ],
+            [
+              75.889103,
+              30.865189
+            ],
+            [
+              75.888688,
+              30.820077
+            ],
+            [
+              75.940957,
+              30.819708
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00682-E00117",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 16,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00682-E00118",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.993226,
+              30.819318
+            ],
+            [
+              75.993691,
+              30.864428
+            ],
+            [
+              75.941398,
+              30.864819
+            ],
+            [
+              75.940957,
+              30.819708
+            ],
+            [
+              75.993226,
+              30.819318
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00682-E00118",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 24,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00682-E00119",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.993226,
+              30.819318
+            ],
+            [
+              76.009217,
+              30.819194
+            ],
+            [
+              76.015228,
+              30.864261
+            ],
+            [
+              75.993691,
+              30.864428
+            ],
+            [
+              75.993226,
+              30.819318
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00682-E00119",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": null,
+        "risk_level": "unknown",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.5,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00681-E00113",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.731872,
+              30.821058
+            ],
+            [
+              75.707109,
+              30.821195
+            ],
+            [
+              75.702605,
+              30.776104
+            ],
+            [
+              75.731531,
+              30.775944
+            ],
+            [
+              75.731872,
+              30.821058
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00681-E00113",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 19,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00681-E00114",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.783779,
+              30.775639
+            ],
+            [
+              75.784145,
+              30.820752
+            ],
+            [
+              75.731872,
+              30.821058
+            ],
+            [
+              75.731531,
+              30.775944
+            ],
+            [
+              75.783779,
+              30.775639
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00681-E00114",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 27,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00681-E00115",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.836026,
+              30.775312
+            ],
+            [
+              75.836417,
+              30.820425
+            ],
+            [
+              75.784145,
+              30.820752
+            ],
+            [
+              75.783779,
+              30.775639
+            ],
+            [
+              75.836026,
+              30.775312
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00681-E00115",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 7,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00681-E00116-P1",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.836026,
+              30.775312
+            ],
+            [
+              75.856715,
+              30.775177
+            ],
+            [
+              75.859789,
+              30.820272
+            ],
+            [
+              75.836417,
+              30.820425
+            ],
+            [
+              75.836026,
+              30.775312
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00681-E00116-P1",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 16,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00681-E00116-P2",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.888688,
+              30.820077
+            ],
+            [
+              75.865213,
+              30.820236
+            ],
+            [
+              75.86829,
+              30.7751
+            ],
+            [
+              75.888273,
+              30.774965
+            ],
+            [
+              75.888688,
+              30.820077
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00681-E00116-P2",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 16,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00681-E00117",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.940518,
+              30.774597
+            ],
+            [
+              75.940957,
+              30.819708
+            ],
+            [
+              75.888688,
+              30.820077
+            ],
+            [
+              75.888273,
+              30.774965
+            ],
+            [
+              75.940518,
+              30.774597
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00681-E00117",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 24,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00681-E00118",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.992763,
+              30.774207
+            ],
+            [
+              75.993226,
+              30.819318
+            ],
+            [
+              75.940957,
+              30.819708
+            ],
+            [
+              75.940518,
+              30.774597
+            ],
+            [
+              75.992763,
+              30.774207
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00681-E00118",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 76,
+        "risk_level": "high",
+        "observed_fire_count": 6,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00681-E00119",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.992763,
+              30.774207
+            ],
+            [
+              76.003212,
+              30.774127
+            ],
+            [
+              76.009217,
+              30.819194
+            ],
+            [
+              75.993226,
+              30.819318
+            ],
+            [
+              75.992763,
+              30.774207
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00681-E00119",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 13,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00680-E00113",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.731531,
+              30.775944
+            ],
+            [
+              75.702605,
+              30.776104
+            ],
+            [
+              75.7,
+              30.75
+            ],
+            [
+              75.731334,
+              30.750015
+            ],
+            [
+              75.731531,
+              30.775944
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00680-E00113",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 27,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00680-E00114",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.731531,
+              30.775944
+            ],
+            [
+              75.731334,
+              30.750015
+            ],
+            [
+              75.783571,
+              30.750023
+            ],
+            [
+              75.783779,
+              30.775639
+            ],
+            [
+              75.731531,
+              30.775944
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00680-E00114",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 7,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00680-E00115",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.783779,
+              30.775639
+            ],
+            [
+              75.783571,
+              30.750023
+            ],
+            [
+              75.835807,
+              30.75001
+            ],
+            [
+              75.836026,
+              30.775312
+            ],
+            [
+              75.783779,
+              30.775639
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00680-E00115",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 16,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00680-E00116-P1",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.888273,
+              30.774965
+            ],
+            [
+              75.86829,
+              30.7751
+            ],
+            [
+              75.87,
+              30.75
+            ],
+            [
+              75.888043,
+              30.750008
+            ],
+            [
+              75.888273,
+              30.774965
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00680-E00116-P1",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 24,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00680-E00116-P2",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.836026,
+              30.775312
+            ],
+            [
+              75.835807,
+              30.75001
+            ],
+            [
+              75.855,
+              30.75
+            ],
+            [
+              75.856715,
+              30.775177
+            ],
+            [
+              75.836026,
+              30.775312
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00680-E00116-P2",
+        "district": "SYNTHETIC-DISTRICT-WEST",
+        "risk_score": 24,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00680-E00117",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.888273,
+              30.774965
+            ],
+            [
+              75.888043,
+              30.750008
+            ],
+            [
+              75.940279,
+              30.750016
+            ],
+            [
+              75.940518,
+              30.774597
+            ],
+            [
+              75.888273,
+              30.774965
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00680-E00117",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 4,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00680-E00118",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.940518,
+              30.774597
+            ],
+            [
+              75.940279,
+              30.750016
+            ],
+            [
+              75.992514,
+              30.750004
+            ],
+            [
+              75.992763,
+              30.774207
+            ],
+            [
+              75.940518,
+              30.774597
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00680-E00118",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 13,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SYNTH-PB-5000M-N00680-E00119",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.992763,
+              30.774207
+            ],
+            [
+              75.992514,
+              30.750004
+            ],
+            [
+              76.0,
+              30.75
+            ],
+            [
+              76.003212,
+              30.774127
+            ],
+            [
+              75.992763,
+              30.774207
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "cell_id": "SYNTH-PB-5000M-N00680-E00119",
+        "district": "SYNTHETIC-DISTRICT-EAST",
+        "risk_score": 21,
+        "risk_level": "low",
+        "observed_fire_count": 0,
+        "evidence_completeness": 0.7,
+        "verification_status": "unverified",
+        "analysis_date": "2026-10-26"
+      }
+    }
+  ]
+}

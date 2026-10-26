@@ -1,0 +1,11 @@
+source_file,line,latitude,longitude,acq_date,acq_time,satellite,confidence,cell_id,status
+synthetic_firms_viirs_window.csv,2,30.8012,75.9503,2026-10-21,0812,N,nominal,SYNTH-PB-5000M-N00681-E00118,assigned
+synthetic_firms_viirs_window.csv,3,30.8031,75.9522,2026-10-21,0812,N,high,SYNTH-PB-5000M-N00681-E00118,assigned
+synthetic_firms_viirs_window.csv,4,30.8007,75.9548,2026-10-22,0754,1,nominal,SYNTH-PB-5000M-N00681-E00118,assigned
+synthetic_firms_viirs_window.csv,5,30.7985,75.9561,2026-10-23,2012,N,nominal,SYNTH-PB-5000M-N00681-E00118,assigned
+synthetic_firms_viirs_window.csv,6,30.805,75.949,2026-10-24,0830,1,high,SYNTH-PB-5000M-N00681-E00118,assigned
+synthetic_firms_viirs_window.csv,7,30.8044,75.9575,2026-10-25,0806,N,high,SYNTH-PB-5000M-N00681-E00118,assigned
+synthetic_firms_viirs_window.csv,8,30.9012,75.752,2026-10-22,0754,1,nominal,SYNTH-PB-5000M-N00683-E00114,assigned
+synthetic_firms_viirs_window.csv,9,30.903,75.7541,2026-10-26,0818,N,nominal,SYNTH-PB-5000M-N00683-E00114,assigned
+synthetic_firms_viirs_window.csv,10,30.9805,75.8812,2026-10-20,0056,N,high,SYNTH-PB-5000M-N00685-E00116,assigned
+synthetic_firms_viirs_window.csv,12,30.8,75.5,2026-10-23,0748,1,nominal,,outside_region
