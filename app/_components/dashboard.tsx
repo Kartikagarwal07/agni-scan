@@ -71,10 +71,8 @@ export function Dashboard() {
     <div className="ag-page">
       <header className="ag-header">
         <div>
-          <h1 className="ag-title">AGNI-SCAN</h1>
-          <p className="ag-muted">
-            Crop-residue burning verification-priority dashboard
-          </p>
+          <p className="ag-eyebrow">Crop-residue burning · verification priority</p>
+          <h1 className="ag-title">Verification dashboard</h1>
         </div>
         <HealthBadge state={health.state} />
       </header>

@@ -9,9 +9,10 @@
   flex-direction: column;
   gap: 16px;
   width: 100%;
-  max-width: 1280px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  /* Clears the fixed site header (data notice + navigation). */
+  padding: 128px clamp(16px, 4vw, 48px) 64px;
   font-size: 14px;
   line-height: 1.45;
 }
@@ -24,11 +25,24 @@
   gap: 12px;
 }
 
+.ag-eyebrow {
+  margin: 0 0 8px;
+  font-family: var(--font-display), sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .ag-title {
   margin: 0;
-  font-size: 24px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(32px, 4.5vw, 56px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 
 .ag-muted {
@@ -48,7 +62,7 @@
 
 .ag-banner {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 14px 16px;
   background: var(--surface-2);
 }
@@ -117,16 +131,19 @@
   gap: 12px;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 2px;
   background: var(--surface);
 }
 
 .ag-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 550;
+  gap: 6px;
+  font-family: var(--font-display), sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
@@ -134,7 +151,7 @@
 .ag-button {
   height: 36px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 2px;
   background: var(--surface);
   color: var(--foreground);
   font: inherit;
@@ -147,12 +164,22 @@
 }
 
 .ag-button {
-  padding: 0 12px;
+  padding: 0 16px;
+  border: 2px solid var(--foreground);
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font-display), sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   cursor: pointer;
+  transition: background 150ms, color 150ms;
 }
 
 .ag-button:hover:not(:disabled) {
-  background: var(--surface-2);
+  background: var(--foreground);
+  color: var(--background);
 }
 
 .ag-button:disabled,
@@ -162,9 +189,10 @@
 }
 
 .ag-buttonSmall {
-  height: 28px;
-  padding: 0 8px;
-  font-size: 12px;
+  height: 30px;
+  padding: 0 10px;
+  border-width: 1px;
+  font-size: 11px;
 }
 
 .ag-select:focus-visible,
@@ -193,7 +221,7 @@
   flex-direction: column;
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 2px;
   background: var(--surface);
 }
 
@@ -204,8 +232,11 @@
 
 .ag-panelTitle {
   margin: 0;
+  font-family: var(--font-display), sans-serif;
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .ag-panelNote {
@@ -230,7 +261,7 @@
   height: auto;
   max-height: 70vh;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 2px;
   background: var(--surface-2);
 }
 
@@ -321,8 +352,11 @@
 .ag-table th {
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
-  font-size: 12px;
-  font-weight: 550;
+  font-family: var(--font-display), sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -447,7 +481,7 @@
   margin: 12px;
   padding: 12px;
   border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
-  border-radius: 6px;
+  border-radius: 2px;
   background: color-mix(in srgb, var(--danger) 10%, var(--surface));
 }
 
@@ -579,7 +613,7 @@
   box-sizing: border-box;
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 2px;
   background: var(--surface);
   color: var(--foreground);
   font: inherit;
@@ -615,19 +649,18 @@
 }
 
 .ag-buttonPrimary {
-  border-color: var(--foreground);
   background: var(--foreground);
   color: var(--background);
-  font-weight: 600;
 }
 
 .ag-buttonPrimary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--foreground) 85%, var(--background));
+  background: transparent;
+  color: var(--foreground);
 }
 
 .ag-feedback {
   padding: 10px 12px;
-  border-radius: 6px;
+  border-radius: 2px;
 }
 
 .ag-feedback p + p {
@@ -697,4 +730,19 @@
 
 .ag-result_inconclusive {
   border: 1px dashed var(--muted);
+}
+
+/* Labels are uppercase display type; the controls inside them are not. */
+.ag-field .ag-select,
+.ag-field .ag-textarea,
+.ag-field .ag-input,
+.ag-inlineField .ag-select {
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.ag-field .ag-hint {
+  letter-spacing: normal;
+  text-transform: none;
 }
