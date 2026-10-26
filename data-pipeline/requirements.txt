@@ -1,0 +1,4 @@
+# Versions verified with Python 3.12 on Windows (see README). pyproject.toml holds the supported ranges.
+shapely==2.2.0
+pyproj==3.8.0
+pytest==8.4.2

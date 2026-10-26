@@ -1,0 +1,23 @@
+{
+  "type": "FeatureCollection",
+  "agni_scan_synthetic": true,
+  "description": "SYNTHETIC TEST FIXTURE. Two invented rectangles standing in for district boundaries. They are NOT real Punjab districts.",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {"district": "SYNTHETIC-DISTRICT-WEST", "synthetic": true},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[75.65, 30.70], [75.85, 30.70], [75.85, 31.05], [75.65, 31.05], [75.65, 30.70]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {"district": "SYNTHETIC-DISTRICT-EAST", "synthetic": true},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[75.85, 30.70], [76.05, 30.70], [76.05, 31.05], [75.85, 31.05], [75.85, 30.70]]]
+      }
+    }
+  ]
+}
