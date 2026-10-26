@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const riskGrid: unknown = JSON.parse(
-  readFileSync(new URL("../data-pipeline/demo/risk_grid.geojson", import.meta.url), "utf8"),
+  readFileSync(join(process.cwd(), "data-pipeline", "demo", "risk_grid.geojson"), "utf8"),
 );
 
 export type RiskLevel = "low" | "medium" | "high" | "unknown";
