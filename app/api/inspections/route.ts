@@ -1,20 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseInspection, parsePagination, RequestValidationError, validationError } from "@/lib/api-core";
-import { createInspection, listInspections } from "@/lib/inspections-store";
+import {
+  createInspection,
+  InspectionStoreConfigurationError,
+  InspectionStoreUnavailableError,
+  listInspections,
+} from "@/lib/inspections-store";
 
 function internalError() {
   return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: "Unexpected server error" } }, { status: 500 });
 }
 
-export function GET(request: NextRequest) {
+function storeError(error: unknown) {
+  if (error instanceof InspectionStoreConfigurationError) {
+    return NextResponse.json({ error: { code: "INSPECTION_STORE_NOT_CONFIGURED", message: error.message } }, { status: 503 });
+  }
+  if (error instanceof InspectionStoreUnavailableError) {
+    return NextResponse.json({ error: { code: "INSPECTION_STORE_UNAVAILABLE", message: "Inspection storage is temporarily unavailable." } }, { status: 503 });
+  }
+  return internalError();
+}
+
+export async function GET(request: NextRequest) {
   try {
     const { limit, offset } = parsePagination(request.nextUrl.searchParams);
     const cellId = request.nextUrl.searchParams.get("cell_id");
-    const inspections = listInspections(cellId);
-    return NextResponse.json({ items: inspections.slice(offset, offset + limit), total: inspections.length, limit, offset });
+    const inspections = await listInspections(cellId, limit, offset);
+    return NextResponse.json({ ...inspections, limit, offset });
   } catch (error) {
     if (error instanceof RequestValidationError) return NextResponse.json(validationError(error.message), { status: 400 });
-    return internalError();
+    return storeError(error);
   }
 }
 
@@ -28,11 +43,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const body: unknown = await request.json();
-    return NextResponse.json(createInspection(parseInspection(body)), { status: 201 });
+    return NextResponse.json(await createInspection(parseInspection(body)), { status: 201 });
   } catch (error) {
     if (error instanceof RequestValidationError || error instanceof SyntaxError) {
       return NextResponse.json(validationError(error instanceof Error ? error.message : undefined), { status: 400 });
     }
-    return internalError();
+    return storeError(error);
   }
 }

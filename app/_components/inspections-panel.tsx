@@ -164,8 +164,8 @@ export function InspectionForm({ cellId, onCreated }: FormProps) {
       )}
 
       <p className="ag-hint">
-        Inspections are kept in the server&apos;s demo memory and are lost when it restarts. Saving one does not change
-        the cell&apos;s verification status.
+        Records are saved by the configured server store. Local development without a database uses temporary memory.
+        Saving one does not change the cell&apos;s verification status.
       </p>
     </form>
   );
