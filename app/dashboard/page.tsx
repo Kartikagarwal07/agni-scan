@@ -4,7 +4,7 @@ import { SiteNav } from "../_components/site-nav";
 
 export const metadata: Metadata = {
   title: "Dashboard · AGNI-SCAN",
-  description: "Verification priorities, grid cells and field inspections. Currently synthetic demo data only.",
+  description: "Verification priorities, grid cells, and field inspections with clearly labelled data provenance.",
 };
 
 // The page shell is static; all data is fetched in the browser from the /api routes,
