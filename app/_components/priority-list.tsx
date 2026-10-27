@@ -33,7 +33,7 @@ export function PriorityList({ state, selectedId, onSelect, onPage, onLimit, onR
     <div>
       <div className="ag-tableWrap">
         <table className="ag-table">
-          <caption className="ag-srOnly">Cells ranked by verification priority, highest score first</caption>
+          <caption className="ag-srOnly">Cells ranked by verification priority</caption>
           <thead>
             <tr>
               {COLUMNS.map((column) => (
@@ -48,7 +48,7 @@ export function PriorityList({ state, selectedId, onSelect, onPage, onLimit, onR
               const selected = item.cell_id === selectedId;
               return (
                 <tr key={item.cell_id} className={selected ? "ag-selectedRow" : undefined}>
-                  <td className="ag-num ag-muted">{offset + index + 1}</td>
+                  <td className="ag-num ag-muted">{item.priority_rank ?? offset + index + 1}</td>
                   <td>
                     <button
                       type="button"

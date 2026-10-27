@@ -167,7 +167,7 @@ export function Dashboard() {
 
       <Panel
         title="Verification priorities"
-        note="Ranked by risk score from GET /api/priorities; cells without a score come last. Only the district filter applies here, because the API does not filter priorities by date or risk level."
+        note="Ranked by the pipeline's priority order when available; otherwise by risk score. Cells without a score come last. Only the district filter applies here, because the API does not filter priorities by date or risk level."
       >
         <PriorityList
           state={priorities.state}

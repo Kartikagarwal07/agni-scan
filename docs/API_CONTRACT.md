@@ -64,6 +64,7 @@ Success (200):
       "risk_score": 82,
       "risk_level": "high",
       "evidence_completeness": 0.75,
+      "priority_rank": 1,
       "verification_status": "unverified"
     }
   ],
@@ -72,6 +73,10 @@ Success (200):
   "offset": 0
 }
 ```
+
+Items are ordered by ascending `priority_rank` when the grid supplies it. Otherwise they are
+ordered by descending `risk_score`, with null scores last. `priority_rank` is optional and does
+not change the risk score or level.
 
 ## 5. GET /api/inspections
 
@@ -151,4 +156,3 @@ HTTP statuses:
 5. Examples are mock data, not actual observations.
 6. Contract changes require team agreement.
 7. Write endpoints require authorization before public deployment.
-  
