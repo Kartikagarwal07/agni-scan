@@ -15,11 +15,11 @@
       "description": "VIIRS detections in the analysis window; 5 or more saturates the component."
     },
     {
-      "name": "historical_detections",
+      "name": "historical_recurrence",
       "source": "firms_history",
       "weight": 0.3,
-      "saturation_count": 20,
-      "description": "VIIRS detections in the supplied historical file (dates before the window); 20 or more saturates."
+      "season_saturation_count": 5,
+      "description": "Recurrence across earlier seasons (calendar years before the window): each season's VIIRS detections are capped at 5, then averaged over the seasons covered, so no single active season dominates."
     },
     {
       "name": "cropland_fraction",

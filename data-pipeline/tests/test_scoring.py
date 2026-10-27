@@ -12,7 +12,7 @@ def config():
 
 
 def test_default_config_loads(config):
-    assert [c.name for c in config.components] == ["observed_detections", "historical_detections", "cropland_fraction"]
+    assert [c.name for c in config.components] == ["observed_detections", "historical_recurrence", "cropland_fraction"]
     assert config.total_weight == pytest.approx(1.0)
     assert config.min_confidence == "nominal"
 
@@ -26,7 +26,7 @@ def test_contract_thresholds(score, level):
 
 
 def test_zero_detections_alone_are_not_evidence_of_no_burning(config):
-    res = score_cell(CellEvidence(observed_count=0, history_count=None, attributes={}), config)
+    res = score_cell(CellEvidence(observed_count=0, history_season_counts=None, attributes={}), config)
     assert res.risk_score is None
     assert res.risk_level == "unknown"
     assert res.reason == "zero_detections_without_independent_evidence"
@@ -34,22 +34,22 @@ def test_zero_detections_alone_are_not_evidence_of_no_burning(config):
 
 
 def test_detections_only_is_scored_when_completeness_suffices(config):
-    res = score_cell(CellEvidence(observed_count=5, history_count=None, attributes={}), config)
+    res = score_cell(CellEvidence(observed_count=5, history_season_counts=None, attributes={}), config)
     assert res.risk_score == 100 and res.risk_level == "high"
-    res = score_cell(CellEvidence(observed_count=1, history_count=None, attributes={}), config)
+    res = score_cell(CellEvidence(observed_count=1, history_season_counts=None, attributes={}), config)
     assert res.risk_score == 20 and res.risk_level == "low"
 
 
 def test_zero_detections_with_independent_evidence_is_scored(config):
-    res = score_cell(CellEvidence(0, 20, {"cropland_fraction": 1.0}), config)
+    res = score_cell(CellEvidence(0, (5, 5, 5), {"cropland_fraction": 1.0}), config)
     assert res.risk_score == 50  # (0.5*0 + 0.3*1 + 0.2*1) / 1.0
     assert res.risk_level == "medium"
     assert res.evidence_completeness == 1.0
 
 
 def test_missing_evidence_is_not_treated_as_zero(config):
-    with_missing = score_cell(CellEvidence(5, 10, {"cropland_fraction": None}), config)
-    # (0.5*1 + 0.3*0.5) / 0.8 = 0.8125 -> 81; treating the gap as zero would give 65.
+    with_missing = score_cell(CellEvidence(5, (5, 0), {"cropland_fraction": None}), config)
+    # history (1 + 0) / 2 = 0.5; (0.5*1 + 0.3*0.5) / 0.8 = 0.8125 -> 81; treating the gap as zero would give 65.
     assert with_missing.risk_score == 81
     assert with_missing.evidence_completeness == 0.8
     assert [c.available for c in with_missing.components] == [True, True, False]
@@ -97,9 +97,30 @@ def test_rounding_is_half_up():
 
 
 def test_saturation_caps_component(config):
-    res = score_cell(CellEvidence(50, 500, {"cropland_fraction": 1.0}), config)
+    res = score_cell(CellEvidence(50, (500, 500), {"cropland_fraction": 1.0}), config)
     assert res.risk_score == 100
     assert all(c.value <= 1 for c in res.components)
+
+
+def test_history_rewards_recurrence_not_one_active_season(config):
+    every_season = score_cell(CellEvidence(0, (5, 5, 5), {}), config).components[1]
+    one_big_season = score_cell(CellEvidence(0, (500, 0, 0), {}), config).components[1]
+    assert every_season.value == 1.0
+    assert one_big_season.value == pytest.approx(1 / 3)  # a single season is capped, then averaged
+    partial = score_cell(CellEvidence(0, (2, 5, 0), {}), config).components[1]
+    assert partial.value == pytest.approx((0.4 + 1 + 0) / 3)
+
+
+def test_zero_recent_and_zero_historical_detections_score_low(config):
+    """Covered seasons with no detections are evidence: the cell is low priority, not unknown."""
+    res = score_cell(CellEvidence(0, (0, 0, 0), {}), config)
+    assert res.risk_score == 0 and res.risk_level == "low" and res.reason == "scored"
+    assert res.evidence_completeness == 0.8
+
+
+def test_empty_history_is_unavailable(config):
+    res = score_cell(CellEvidence(0, (), {}), config)
+    assert res.risk_level == "unknown" and res.components[1].available is False
 
 
 @pytest.mark.parametrize(
@@ -111,6 +132,10 @@ def test_saturation_caps_component(config):
         ([{"name": "a", "source": "cell_attribute", "weight": True}], "positive number"),
         ([{"name": "a", "source": "firms_window", "weight": 1}], "saturation_count"),
         ([{"name": "a", "source": "cell_attribute", "weight": 1, "saturation_count": 3}], "only applies"),
+        ([{"name": "a", "source": "firms_history", "weight": 1, "saturation_count": 20}], "scored per season"),
+        ([{"name": "a", "source": "firms_history", "weight": 1}], "season_saturation_count"),
+        ([{"name": "a", "source": "firms_window", "weight": 1, "saturation_count": 1, "season_saturation_count": 1}],
+         "only applies to firms_history"),
         ([{"name": "a", "source": "cell_attribute", "weight": 1}] * 2, "unique"),
         ([{"name": "bad name", "source": "cell_attribute", "weight": 1}], "identifier"),
         (

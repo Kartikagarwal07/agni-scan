@@ -5,7 +5,7 @@
     "data_provenance": "SYNTHETIC_DEMONSTRATION_NOT_REAL_SATELLITE_DATA",
     "synthetic": true,
     "disclaimer": "SYNTHETIC DEMONSTRATION OUTPUT. Generated from fabricated test fixtures. These are NOT real satellite observations, NOT real Punjab boundaries and NOT real district data. Do not use for enforcement, reporting or any operational decision.",
-    "interpretation": "risk_score is a heuristic verification-priority score for scheduling field checks; it is NOT a probability of burning or of undetected fire. observed_fire_count counts satellite detections only. Zero detections do not prove zero burning: cloud or smoke cover, overpass timing and small or short-lived fires all cause missed detections. risk_score is null (risk_level 'unknown') when the available evidence is insufficient.",
+    "interpretation": "risk_score is a heuristic verification-priority score for scheduling field checks; it is NOT a probability of burning or of undetected fire. observed_fire_count counts satellite detections only. Zero detections do not prove zero burning: cloud or smoke cover, overpass timing and small or short-lived fires all cause missed detections, so low priority does not prove no burning. risk_score is null (risk_level 'unknown') when the available evidence is insufficient.",
     "generated_at": null,
     "deterministic": true,
     "pipeline": {
@@ -88,6 +88,8 @@
       "in_dropped_sliver": 0,
       "historical_used": null,
       "historical_duplicates_removed": null,
+      "historical_seasons": null,
+      "historical_assigned_by_season": null,
       "rejected_rows": 0
     },
     "scoring": {
@@ -115,11 +117,11 @@
           "description": "VIIRS detections in the analysis window; 5 or more saturates the component."
         },
         {
-          "name": "historical_detections",
+          "name": "historical_recurrence",
           "source": "firms_history",
           "weight": 0.3,
-          "saturation_count": 20,
-          "description": "VIIRS detections in the supplied historical file (dates before the window); 20 or more saturates."
+          "season_saturation_count": 5,
+          "description": "Recurrence across earlier seasons (calendar years before the window): each season's VIIRS detections are capped at 5, then averaged over the seasons covered, so no single active season dominates."
         },
         {
           "name": "cropland_fraction",
