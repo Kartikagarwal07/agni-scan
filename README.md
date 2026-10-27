@@ -1,68 +1,100 @@
 # AGNI-SCAN
 
-AGNI-SCAN turns satellite fire observations into a transparent field-verification queue for Punjab. It helps teams decide **where to inspect first**, while keeping the distinction between a satellite heat signal and confirmed crop-residue burning visible at every stage.
+> **From satellite signals to smarter field visits.**
 
-The repository combines a Next.js dashboard, contract-tested API routes, and a reproducible Python data pipeline. The default website is a safe synthetic demonstration. A locally generated real-data output can be selected through a server-only environment variable after it has been reviewed.
+AGNI-SCAN is a transparent verification-priority dashboard for possible crop-residue burning in Punjab. It does **not** claim that a satellite detection proves burning. Instead, it helps field teams decide **which 5 km grid cell to verify first**, explains why, and records what inspectors find.
 
-## Getting Started
+## Why it matters
+
+Field teams cannot inspect every location at once. A satellite heat signal can be caused by several sources and may be missed because of clouds, smoke, timing, or sensor limits. AGNI-SCAN turns these imperfect observations into an explainable queue for human verification.
+
+```text
+NASA FIRMS observations + historical recurrence + land-cover context
+                              │
+                              ▼
+                    explainable 5 km grid
+                              │
+                              ▼
+              ranked field-verification priorities
+                              │
+                              ▼
+             inspector outcome stored for auditability
+```
+
+## What the dashboard does
+
+- Displays a Punjab-wide grid with high, medium, low, and unknown verification priorities.
+- Explains each selected cell: observed detections, evidence completeness, risk score, priority rank, and provenance.
+- Filters priorities by district, date, and risk level.
+- Preserves the data source and synthetic/real-data label throughout the interface.
+- Records field outcomes: **fire evidence found**, **no fire evidence found**, or **inconclusive**.
+- Persists inspections in Supabase when configured, rather than losing them when the server restarts.
+
+## Evidence model
+
+The default heuristic is intentionally simple and inspectable:
+
+| Evidence | Role | Rule |
+| --- | --- | --- |
+| Recent NASA FIRMS VIIRS detections | Main score | Weight 0.5; five or more detections saturate this component. |
+| Historical FIRMS recurrence | Secondary score | Weight 0.3; each season is capped separately, then seasons are averaged. |
+| ESA WorldCover 2021 cropland fraction | Tie-break only | Orders equal-scoring cells with fire evidence; never increases a score or risk level. |
+
+`priority_rank = 1` means **verify first**. A score is a field-work priority heuristic—not a probability, legal finding, or confirmation of burning.
+
+## Real-data workflow
+
+The reproducible pipeline can use:
+
+- **NASA FIRMS VIIRS** observations from Suomi-NPP, NOAA-20, and NOAA-21.
+- **Survey of India / NWIC** Punjab state and district boundaries.
+- **ESA WorldCover 10 m (2021 v200)** general cropland coverage, class 40, under CC BY 4.0.
+
+One evaluated local run produced **2,256 5 km cells**: 54 high, 187 medium, and 2,015 low priorities. Raw detections, boundary downloads, land-cover tiles, processed real outputs, and API keys are deliberately excluded from Git.
+
+See [`data-pipeline/README.md`](data-pipeline/README.md) for reproducibility, provenance, checksums, and data-preparation commands.
+
+## Quick start
 
 ```powershell
+git clone https://github.com/Kartikagarwal07/agni-scan.git
+cd agni-scan
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) for the landing page or [http://localhost:3000/dashboard](http://localhost:3000/dashboard) for the dashboard.
+Open [http://localhost:3000](http://localhost:3000) and select **Dashboard**.
 
-## Demo API
+The committed default is a clearly labelled synthetic demonstration dataset, so the repository runs safely without private data.
 
-The backend implements the shared API and data contracts in `docs/`. `GET /api/grid`
-serves the deterministic synthetic grid generated in `data-pipeline/demo/`, including
-its provenance metadata and safety disclaimer. It is not satellite data, Punjab
-geography, or a validated burning estimate.
+## Use a reviewed local real grid
 
-`POST /api/inspections` uses in-memory demo storage, so records reset when the
-server restarts. In production it requires an `x-agni-scan-write-token` header
-matching the server-only `AGNI_SCAN_WRITE_TOKEN` environment variable. Do not
-deploy the demo write store publicly; replace it with authenticated persistent
-storage first.
-
-By default, `GET /api/grid` serves the committed synthetic grid. To serve a locally generated real-data output, set `AGNI_GRID_PATH` in `.env.local`:
+Keep processed real output outside Git and set this in `.env.local`:
 
 ```text
-AGNI_GRID_PATH=C:\path\to\data-pipeline\output\real-2026-10-26-20261027-060500\risk_grid.geojson
+AGNI_GRID_PATH=data-pipeline/output/real/risk_grid.geojson
 ```
 
-Relative paths resolve from the repository root. The API validates the selected GeoJSON at startup and fails clearly if it is missing or violates the shared data contract. The path and raw files stay server-side; the dashboard receives only the validated grid and its provenance metadata. Remove `AGNI_GRID_PATH` to return to the synthetic demo.
+The API validates the selected GeoJSON against the shared data contract before it is served. Remove the setting to return to the synthetic demonstration grid.
 
-The reproducible real-data workflow is documented in [`data-pipeline/README.md`](data-pipeline/README.md). It uses official Punjab boundaries distributed through NWIC and NASA FIRMS VIIRS observations. Those observations identify thermal anomalies and support prioritisation; they do not, by themselves, prove crop-residue burning.
+## Persistent field inspections
 
-First, run the development server:
+AGNI-SCAN uses a Supabase PostgreSQL table when server-only Supabase credentials are configured. Browser clients never receive the database secret key; production refuses to fall back to temporary memory when persistent storage is missing.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Setup instructions: [`docs/SUPABASE_SETUP.md`](docs/SUPABASE_SETUP.md)
 
-Run API validation tests with `npm test`.
+## API surface
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Route | Purpose |
+| --- | --- |
+| `GET /api/health` | Backend availability check |
+| `GET /api/grid` | Filtered GeoJSON grid with provenance metadata |
+| `GET /api/grid/:id` | One grid cell by stable ID |
+| `GET /api/priorities` | Paginated verification queue, respecting pipeline priority ranks |
+| `GET /api/inspections` | Persistent inspection history, optionally for one cell |
+| `POST /api/inspections` | Validated, authorized field-verification result |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Project map
-
-- `app/` — landing page, dashboard, and API route handlers.
-- `lib/api-core.ts` — grid loading, contract validation, filtering, and inspection rules.
-- `lib/dashboard/` — browser API clients, formatting, projection, and provenance display.
-- `data-pipeline/` — boundary preparation, FIRMS ingestion, scoring, contract checks, and reproducible runs.
-- `docs/` — API and data contracts shared by the team.
+The exact API request and response shapes are in [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md). The GeoJSON data requirements are in [`docs/DATA_CONTRACT.md`](docs/DATA_CONTRACT.md).
 
 ## Verification
 
@@ -73,44 +105,32 @@ npx tsc --noEmit
 npm run build
 ```
 
-The data pipeline has its own offline test suite and setup instructions under [`data-pipeline/`](data-pipeline/).
+The data pipeline has its own offline test suite under `data-pipeline/tests`.
 
-## API surface
+## Responsible-use notes
 
-| Route | Purpose |
-| --- | --- |
-| `GET /api/health` | Service health check |
-| `GET /api/grid` | Filtered GeoJSON risk grid with provenance metadata |
-| `GET /api/grid/:id` | One grid cell by stable ID |
-| `GET /api/priorities` | Paginated verification priorities |
-| `GET /api/inspections` | Recorded inspections, optionally filtered by cell |
-| `POST /api/inspections` | Validate and record a field result |
+- FIRMS detections are thermal anomalies, **not confirmed crop-residue-burning events**.
+- Zero detections do not prove that burning did not happen.
+- WorldCover reports general cropland, **not paddy-specific coverage**.
+- The current authoritative district source represents Malerkotla within Sangrur; this limitation is documented in pipeline provenance.
+- The final decision remains with trained human inspectors and relevant authorities.
 
-The exact request and response shapes live in [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md). Data provenance and risk-grid requirements live in [`docs/DATA_CONTRACT.md`](docs/DATA_CONTRACT.md).
+## Project structure
 
-## How the score is used
+```text
+app/             Next.js interface and route handlers
+lib/             Contract validation, data loading, ranking, inspection storage
+data-pipeline/   Reproducible boundaries, FIRMS, scoring, and evidence workflow
+docs/            Shared API, data, and deployment documentation
+supabase/        Versioned database migration for persistent inspections
+```
 
-Each grid cell receives a verification-priority score from available evidence such as recent FIRMS detections, historical detections, and optional cropland attributes. Evidence completeness is shown separately from the score. Missing evidence is never silently treated as zero, and `unknown` means that the system lacks enough evidence to rank the cell reliably.
+## Credits
 
-The score is a field-work heuristic. It is not a probability, legal finding, or proof that burning occurred. Field teams record one of three outcomes: fire evidence found, no fire evidence found, or inconclusive.
+- NASA FIRMS for VIIRS active-fire observations.
+- ESA WorldCover project / modified Copernicus Sentinel data processed by the ESA WorldCover consortium.
+- Survey of India / NWIC for boundary data used in local processing.
 
-## Team workflow
+---
 
-Create focused branches from the latest `main`, run the relevant checks, and open a pull request before merging. Keep `.env.local`, raw FIRMS downloads, generated outputs, and private credentials out of Git. Preserve the provenance metadata whenever data moves between the pipeline, API, and dashboard.
-
-AGNI-SCAN is designed to make the next field visit more informed, more explainable, and easier to verify.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**AGNI-SCAN does not replace field verification—it helps make the next field visit more informed, explainable, and auditable.**
