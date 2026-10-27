@@ -6,8 +6,12 @@ or is *unavailable*:
 * ``firms_window``  - detections in the analysis window,
   ``min(count / saturation_count, 1)``. Always available (a FIRMS file is a
   required input).
-* ``firms_history`` - detections in a supplied historical FIRMS file,
-  same transform. Unavailable when no historical file is supplied.
+* ``firms_history`` - recurrence across earlier seasons. Each season's
+  detections are capped separately, ``min(count_s / season_saturation_count, 1)``,
+  and the component is the mean over the seasons the historical files cover.
+  A cell that burns every season therefore outranks one with a single very
+  active season, and no one season can dominate. Unavailable when no
+  historical file (or no season before the window) is supplied.
 * ``cell_attribute`` - a per-cell value in [0, 1] from the cell-evidence CSV.
   Unavailable when the CSV, the column, or the cell's value is missing.
 
@@ -51,6 +55,7 @@ class Component:
     source: str
     weight: float
     saturation_count: int | None = None
+    season_saturation_count: int | None = None
     description: str = ""
 
 
@@ -84,6 +89,7 @@ class ScoringConfig:
                     "source": c.source,
                     "weight": c.weight,
                     **({"saturation_count": c.saturation_count} if c.saturation_count else {}),
+                    **({"season_saturation_count": c.season_saturation_count} if c.season_saturation_count else {}),
                     "description": c.description,
                 }
                 for c in self.components
@@ -94,6 +100,10 @@ class ScoringConfig:
 def _require(cond: bool, message: str) -> None:
     if not cond:
         raise ConfigError(f"scoring config: {message}")
+
+
+def _positive_int(value) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 1
 
 
 def parse_config(data: dict, source: str) -> ScoringConfig:
@@ -111,15 +121,21 @@ def parse_config(data: dict, source: str) -> ScoringConfig:
             isinstance(weight, (int, float)) and not isinstance(weight, bool) and weight > 0 and math.isfinite(weight),
             f"component {name!r}: 'weight' must be a positive number",
         )
-        sat = c.get("saturation_count")
-        if src in ("firms_window", "firms_history"):
+        sat, season_sat = c.get("saturation_count"), c.get("season_saturation_count")
+        if src == "firms_window":
+            _require(_positive_int(sat), f"component {name!r}: 'saturation_count' must be an integer >= 1")
+            _require(season_sat is None, f"component {name!r}: 'season_saturation_count' only applies to firms_history")
+        elif src == "firms_history":
             _require(
-                isinstance(sat, int) and not isinstance(sat, bool) and sat >= 1,
-                f"component {name!r}: 'saturation_count' must be an integer >= 1",
+                sat is None,
+                f"component {name!r}: firms_history is scored per season; use 'season_saturation_count' "
+                "instead of 'saturation_count'",
             )
+            _require(_positive_int(season_sat), f"component {name!r}: 'season_saturation_count' must be an integer >= 1")
         else:
-            _require(sat is None, f"component {name!r}: 'saturation_count' only applies to FIRMS sources")
-        components.append(Component(name, src, float(weight), sat, str(c.get("description", ""))))
+            _require(sat is None and season_sat is None,
+                     f"component {name!r}: 'saturation_count' only applies to FIRMS sources")
+        components.append(Component(name, src, float(weight), sat, season_sat, str(c.get("description", ""))))
 
     names = [c.name for c in components]
     _require(len(set(names)) == len(names), "component names must be unique")
@@ -171,7 +187,9 @@ def load_config(path: str | Path | None = None) -> ScoringConfig:
 @dataclass
 class CellEvidence:
     observed_count: int
-    history_count: int | None  # None: no historical file supplied
+    # Detections per historical season, one entry for every season covered (zeros
+    # included). None or empty: no historical evidence supplied.
+    history_season_counts: tuple[int, ...] | None
     attributes: dict[str, float | None]
 
 
@@ -212,7 +230,10 @@ def score_cell(evidence: CellEvidence, config: ScoringConfig) -> ScoreResult:
         if c.source == "firms_window":
             value = _saturate(evidence.observed_count, c.saturation_count)
         elif c.source == "firms_history":
-            value = None if evidence.history_count is None else _saturate(evidence.history_count, c.saturation_count)
+            counts = evidence.history_season_counts
+            value = (
+                sum(_saturate(n, c.season_saturation_count) for n in counts) / len(counts) if counts else None
+            )
         else:
             value = evidence.attributes.get(c.name)
         results.append(ComponentResult(c.name, value is not None, value, c.weight))

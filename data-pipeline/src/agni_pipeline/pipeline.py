@@ -40,8 +40,8 @@ INTERPRETATION = (
     "risk_score is a heuristic verification-priority score for scheduling field checks; it is NOT a "
     "probability of burning or of undetected fire. observed_fire_count counts satellite detections only. "
     "Zero detections do not prove zero burning: cloud or smoke cover, overpass timing and small or "
-    "short-lived fires all cause missed detections. risk_score is null (risk_level 'unknown') when the "
-    "available evidence is insufficient."
+    "short-lived fires all cause missed detections, so low priority does not prove no burning. risk_score "
+    "is null (risk_level 'unknown') when the available evidence is insufficient."
 )
 
 
@@ -152,12 +152,24 @@ def run_pipeline(inp: PipelineInputs) -> PipelineResult:
     history_results, history_rejections = _load_firms_set(inp.history_paths, "historical FIRMS input", inp.strict)
     history: list[Detection] | None = None
     history_dupes = 0
+    # A season is the calendar year of acq_date (Punjab's paddy-residue season, Oct-Nov, never spans
+    # a year end). A season is "covered" when the historical files hold any valid row for it, before
+    # quality and boundary filters, so a cell with no detections in a covered season counts as zero.
+    seasons: list[int] = []
     if history_results:
         hist_all, history_dupes = deduplicate([d for r in history_results for d in r.detections])
-        hist_kept = apply_quality_filters(
-            hist_all, min_confidence=config.min_confidence, exclude_fire_types=config.exclude_fire_types
+        hist_before = [d for d in hist_all if d.acq_date < start]
+        seasons = sorted({d.acq_date.year for d in hist_before})
+        history = apply_quality_filters(
+            hist_before, min_confidence=config.min_confidence, exclude_fire_types=config.exclude_fire_types
         ).kept
-        history = [d for d in hist_kept if d.acq_date < start]
+        if not seasons:
+            warnings.append("Historical FIRMS input has no rows before the analysis window; history is unavailable.")
+        elif seasons[-1] == start.year:
+            warnings.append(
+                f"Historical season {start.year} is the analysis window's year, so it covers only the days "
+                "before the window and is a partial season."
+            )
     rejections = rejections + history_rejections
 
     evidence_table = None
@@ -194,7 +206,11 @@ def run_pipeline(inp: PipelineInputs) -> PipelineResult:
         )
 
     window_assign = assign_detections(window, grid, region)
-    history_counts = assign_detections(history, grid, region).counts if history is not None else None
+    # Per-season history counts: cell_id -> detections, one dict per covered season.
+    season_counts = {
+        year: assign_detections([d for d in history if d.acq_date.year == year], grid, region).counts
+        for year in seasons
+    }
 
     if evidence_table is not None:
         known = {c.cell_id for c in grid.cells}
@@ -210,9 +226,9 @@ def run_pipeline(inp: PipelineInputs) -> PipelineResult:
     levels: Counter = Counter()
     for cell in grid.cells:
         observed = window_assign.counts.get(cell.cell_id, 0)
-        hist = None if history_counts is None else history_counts.get(cell.cell_id, 0)
+        by_season = tuple(season_counts[year].get(cell.cell_id, 0) for year in seasons)
         attrs = evidence_table.values.get(cell.cell_id, {}) if evidence_table else {}
-        result = score_cell(CellEvidence(observed, hist, attrs), config)
+        result = score_cell(CellEvidence(observed, by_season or None, attrs), config)
         levels[result.risk_level] += 1
         district = cell.district or DISTRICT_UNAVAILABLE
         props = {
@@ -231,7 +247,9 @@ def run_pipeline(inp: PipelineInputs) -> PipelineResult:
             "district": district,
             "district_overlap_fraction": None if cell.district_overlap is None else round(cell.district_overlap, 4),
             "observed_fire_count": observed,
-            "historical_fire_count": hist,
+            "historical_fire_count": sum(by_season) if seasons else None,
+            "historical_seasons_with_fire": sum(1 for n in by_season if n) if seasons else None,
+            "historical_fire_count_by_season": ";".join(f"{y}:{n}" for y, n in zip(seasons, by_season)) or None,
         }
         for comp in result.components:
             row[f"{comp.name}_value"] = None if comp.value is None else round(comp.value, 4)
@@ -304,6 +322,10 @@ def run_pipeline(inp: PipelineInputs) -> PipelineResult:
             "in_dropped_sliver": status.get("in_dropped_sliver", 0),
             "historical_used": None if history is None else len(history),
             "historical_duplicates_removed": history_dupes if history_results else None,
+            "historical_seasons": seasons if history_results else None,
+            "historical_assigned_by_season": (
+                {str(y): sum(season_counts[y].values()) for y in seasons} if history_results else None
+            ),
             "rejected_rows": len(rejections),
         },
         "scoring": config.to_metadata(),

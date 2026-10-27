@@ -85,6 +85,15 @@ def test_demo_counts_and_bookkeeping(demo_result):
     assert d["outside_region"] == 1
     # history: 21 rows, 1 static-source type 2 removed, 1 inside the window excluded
     assert d["historical_used"] == 19
+    assert d["historical_seasons"] == [2024, 2025]
+    by_season = d["historical_assigned_by_season"]
+    explained = demo_result.explanations
+    assert sum(by_season.values()) == sum(e["historical_fire_count"] for e in explained)
+    for e in explained:
+        parts = dict(x.split(":") for x in e["historical_fire_count_by_season"].split(";"))
+        assert list(parts) == ["2024", "2025"]
+        assert sum(map(int, parts.values())) == e["historical_fire_count"]
+        assert e["historical_seasons_with_fire"] == sum(1 for v in parts.values() if v != "0")
     counts = meta["risk_level_counts"]
     assert sum(counts.values()) == len(feats) == meta["grid"]["cell_count"]
     hot = next(f for f in feats if f["properties"]["observed_fire_count"] == 6)
@@ -106,6 +115,22 @@ def test_window_only_input_yields_unknown_for_zero_detection_cells(fixtures_dir)
         else:
             assert p["risk_score"] is not None
     assert validate_feature_collection(res.collection) == []
+
+
+def test_history_with_no_rows_before_the_window_is_unavailable(fixtures_dir, write_firms):
+    only_in_window = write_firms([nrt_row(30.0, 75.0, date="2026-10-24")], name="hist.csv")
+    res = run_pipeline(demo_inputs(fixtures_dir, history_paths=[only_in_window], cell_evidence_path=None))
+    assert res.metadata["detections"]["historical_seasons"] == []
+    assert any("no rows before the analysis window" in w for w in res.metadata["warnings"])
+    zero = [f["properties"] for f in res.collection["features"] if f["properties"]["observed_fire_count"] == 0]
+    assert zero and all(p["risk_level"] == "unknown" for p in zero)
+
+
+def test_history_in_the_window_year_is_flagged_as_partial_season(fixtures_dir, write_firms):
+    earlier_this_year = write_firms([nrt_row(30.0, 75.0, date="2026-10-01")], name="hist.csv")
+    res = run_pipeline(demo_inputs(fixtures_dir, history_paths=[earlier_this_year], cell_evidence_path=None))
+    assert res.metadata["detections"]["historical_seasons"] == [2026]
+    assert any("partial season" in w for w in res.metadata["warnings"])
 
 
 def test_write_outputs(tmp_path, demo_result):

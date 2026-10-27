@@ -41,7 +41,7 @@ pytest 8.4.2). Both shapely and pyproj ship Windows wheels, so you don't need GD
 python -m pytest
 ```
 
-Expected output: `136 passed`. No test needs the network or a FIRMS key.
+Expected output: `144 passed`. No test needs the network or a FIRMS key.
 
 ## 3. Deterministic demo grid
 
@@ -221,7 +221,7 @@ python -m agni_pipeline run `
 | `--district-name-field` | Property holding the district name (default `district`). |
 | `--analysis-date`, `--window-days` | Window = the `window-days` days ending on `analysis-date`, inclusive, by FIRMS `acq_date` (UTC). |
 | `--cell-size-m` | Grid cell size in metres, 100–50000 (default 5000). |
-| `--history-firms CSV` (repeatable) | Optional earlier-season detections. Only dates **before** the window are used. |
+| `--history-firms CSV` (repeatable) | Optional earlier-season detections, e.g. from `scripts\history-firms.ps1` (§4.5). Only dates **before** the window are used, scored per season. |
 | `--cell-evidence CSV` | Optional per-cell values such as `cropland_fraction` (see §6). |
 | `--config JSON` | Scoring config (default: [`src/agni_pipeline/default_scoring.json`](src/agni_pipeline/default_scoring.json)). |
 | `--synthetic` | Force the output to be labeled synthetic. |
@@ -241,6 +241,22 @@ or contract error, and the message names the file, line, or field. Exit code `2`
 | `detection_assignments.csv` | Every in-window detection that passed the filters, with its cell or `outside_region`. |
 | `rejected_rows.csv` | Every rejected input row, with file, line number and reason. |
 | `detection_funnel.csv` | Where every input row went, per FIRMS file (see §4.3). |
+
+### 4.5 Historical seasons (`--history-firms`)
+
+```powershell
+.\scripts\history-firms.ps1 -Years 2023,2024,2025      # 15 Oct - 15 Nov each year, SP data
+```
+
+This downloads `VIIRS_SNPP_SP`, `VIIRS_NOAA20_SP` and `VIIRS_NOAA21_SP` for the state's bounding box in
+5-day chunks, into `data\firms\history\<year>\<chunk start>\`, with one `manifest.json` per chunk.
+Chunks that are already present are skipped. Use `-SeasonStart` and `-SeasonEnd` (`MM-dd`) to change
+the season. Pass every CSV to `run`:
+
+```powershell
+$hist = Get-ChildItem data\firms\history -Recurse -Filter *.csv | ForEach-Object { '--history-firms'; $_.FullName }
+python -m agni_pipeline run ... @hist
+```
 
 ## 5. Input requirements
 
@@ -316,7 +332,7 @@ never inferred or guessed.
 | Component (default weight) | Source | Value |
 | --- | --- | --- |
 | `observed_detections` (0.5) | FIRMS, analysis window | `min(count / 5, 1)` |
-| `historical_detections` (0.3) | `--history-firms` | `min(count / 20, 1)`; unavailable if no history file |
+| `historical_recurrence` (0.3) | `--history-firms` | mean over covered seasons of `min(count_season / 5, 1)`; unavailable if no history file |
 | `cropland_fraction` (0.2) | `--cell-evidence` column | as supplied (0–1); blank/`NA` means unavailable |
 
 - `evidence_completeness` is the sum of the weights of available components divided by the total weight.
@@ -326,6 +342,26 @@ never inferred or guessed.
 - The score is also `null` / `unknown` when a cell has **zero detections and no independent evidence**
   (history or cell attributes).
 - Levels follow the contract thresholds: low 0–39, medium 40–69, high 70–100.
+
+**Historical recurrence.** A *season* is the calendar year of `acq_date`: Punjab's paddy-residue season
+(October–November) never crosses a year end. A season counts as *covered* when the history files
+contain any valid row in it, before the quality and boundary filters. Each covered season's
+detections in the cell are capped at 5, then averaged over the seasons:
+
+| Cell's detections in 2023 / 2024 / 2025 | Component value |
+| --- | ---: |
+| 5+ / 5+ / 5+ (burns every season) | 1.00 |
+| 200 / 0 / 0 (one very active season) | 0.33 |
+| 2 / 5 / 0 | 0.47 |
+| 0 / 0 / 0 | 0.00 |
+
+So recurrence matters more than volume, and no single active season can dominate. Totals capped
+across all seasons (the earlier `min(total / 20, 1)` rule) let one exceptional year saturate most
+cells. A cell with zero detections in the window **and** in every covered season is scored, and
+normally comes out `low`. Several seasons of coverage are evidence, but low priority still does not
+prove no burning, and `metadata.interpretation` says so. The pipeline warns when a history season is
+the window's own year, because that season is partial. `score_explanations.csv` lists
+`historical_fire_count_by_season` and `historical_seasons_with_fire` for every cell.
 
 The weights are expert-set defaults. They have not been fitted or validated against ground truth,
 and you can tune them in the JSON config. With the defaults, a cell with zero window detections can
@@ -356,6 +392,7 @@ data-pipeline/
   fixtures/synthetic/   SYNTHETIC test inputs (not real data)
   demo/                 committed deterministic demo output (SYNTHETIC)
   scripts/real-data.ps1 one-command reproducible real-data run
+  scripts/history-firms.ps1  historical SP seasons for --history-firms
   data/, output/        real inputs and results (git-ignored)
   tests/                pytest suite
 ```
