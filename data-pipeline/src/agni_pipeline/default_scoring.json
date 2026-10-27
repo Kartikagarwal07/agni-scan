@@ -24,8 +24,8 @@
     {
       "name": "cropland_fraction",
       "source": "cell_attribute",
-      "weight": 0.2,
-      "description": "Share of the cell under paddy/cropland (0-1), supplied per cell_id from an authoritative land-cover product."
+      "role": "tie_break",
+      "description": "Share of the cell classified as cropland (0-1), general cropland coverage, not paddy-specific; e.g. ESA WorldCover class 40 via prepare-cropland. Tie-break only: orders equal scores among cells with recent or historical fire evidence and never changes risk_score or risk_level."
     }
   ]
 }

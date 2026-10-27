@@ -15,7 +15,15 @@ or is *unavailable*:
 * ``cell_attribute`` - a per-cell value in [0, 1] from the cell-evidence CSV.
   Unavailable when the CSV, the column, or the cell's value is missing.
 
-``evidence_completeness`` is the share of total configured weight whose
+Each component has a ``role``. ``score`` components (the default) have a
+weight and make up the score. A ``tie_break`` component (at most one, a
+``cell_attribute`` such as cropland_fraction) never changes ``risk_score``,
+``risk_level`` or ``evidence_completeness``: it only orders cells with equal
+scores, and only cells with fire evidence (a detection in the window or in any
+historical season). Cells without fire evidence get no tie-break value, so
+land cover alone can never raise a cell's priority.
+
+``evidence_completeness`` is the share of total score weight whose
 component is available. The score is the weighted mean of the *available*
 components scaled to 0-100 and rounded half-up to an integer. Missing
 evidence is never treated as zero.
@@ -45,6 +53,7 @@ from .errors import ConfigError
 from .firms import CONFIDENCE_LEVELS, FIRE_TYPES
 
 SOURCES = ("firms_window", "firms_history", "cell_attribute")
+ROLES = ("score", "tie_break")
 MEDIUM_THRESHOLD = 40
 HIGH_THRESHOLD = 70
 
@@ -57,6 +66,7 @@ class Component:
     saturation_count: int | None = None
     season_saturation_count: int | None = None
     description: str = ""
+    role: str = "score"
 
 
 @dataclass(frozen=True)
@@ -70,7 +80,11 @@ class ScoringConfig:
 
     @property
     def total_weight(self) -> float:
-        return sum(c.weight for c in self.components)
+        return sum(c.weight for c in self.components if c.role == "score")
+
+    @property
+    def tie_break(self) -> Component | None:
+        return next((c for c in self.components if c.role == "tie_break"), None)
 
     def attribute_names(self) -> list[str]:
         return [c.name for c in self.components if c.source == "cell_attribute"]
@@ -87,13 +101,21 @@ class ScoringConfig:
                 {
                     "name": c.name,
                     "source": c.source,
-                    "weight": c.weight,
+                    "role": c.role,
+                    "weight": c.weight if c.role == "score" else None,
                     **({"saturation_count": c.saturation_count} if c.saturation_count else {}),
                     **({"season_saturation_count": c.season_saturation_count} if c.season_saturation_count else {}),
                     "description": c.description,
                 }
                 for c in self.components
             ],
+            "ordering": (
+                "risk_score descending; equal scores among cells with fire evidence ordered by "
+                f"{self.tie_break.name} descending; then cell_id. Written as priority_rank (1 = first) "
+                "on every scored feature."
+                if self.tie_break
+                else "risk_score descending, then cell_id"
+            ),
         }
 
 
@@ -115,12 +137,20 @@ def parse_config(data: dict, source: str) -> ScoringConfig:
     for i, c in enumerate(raw_components):
         _require(isinstance(c, dict), f"component {i} must be an object")
         name, src, weight = c.get("name"), c.get("source"), c.get("weight")
+        role = c.get("role", "score")
         _require(isinstance(name, str) and name.isidentifier(), f"component {i}: 'name' must be an identifier")
         _require(src in SOURCES, f"component {name!r}: 'source' must be one of {SOURCES}")
-        _require(
-            isinstance(weight, (int, float)) and not isinstance(weight, bool) and weight > 0 and math.isfinite(weight),
-            f"component {name!r}: 'weight' must be a positive number",
-        )
+        _require(role in ROLES, f"component {name!r}: 'role' must be one of {ROLES}")
+        if role == "tie_break":
+            _require(src == "cell_attribute", f"component {name!r}: a tie_break component must be a cell_attribute")
+            _require(weight is None, f"component {name!r}: a tie_break component has no weight (it never changes the score)")
+            weight = 0.0
+        else:
+            _require(
+                isinstance(weight, (int, float)) and not isinstance(weight, bool) and weight > 0
+                and math.isfinite(weight),
+                f"component {name!r}: 'weight' must be a positive number",
+            )
         sat, season_sat = c.get("saturation_count"), c.get("season_saturation_count")
         if src == "firms_window":
             _require(_positive_int(sat), f"component {name!r}: 'saturation_count' must be an integer >= 1")
@@ -135,12 +165,14 @@ def parse_config(data: dict, source: str) -> ScoringConfig:
         else:
             _require(sat is None and season_sat is None,
                      f"component {name!r}: 'saturation_count' only applies to FIRMS sources")
-        components.append(Component(name, src, float(weight), sat, season_sat, str(c.get("description", ""))))
+        components.append(Component(name, src, float(weight), sat, season_sat, str(c.get("description", "")), role))
 
     names = [c.name for c in components]
     _require(len(set(names)) == len(names), "component names must be unique")
     for src in ("firms_window", "firms_history"):
         _require(sum(c.source == src for c in components) <= 1, f"at most one {src!r} component is allowed")
+    _require(sum(c.role == "tie_break" for c in components) <= 1, "at most one tie_break component is allowed")
+    _require(any(c.role == "score" for c in components), "at least one component must have role 'score'")
 
     mec = data.get("min_evidence_completeness", 0.5)
     _require(
@@ -199,6 +231,7 @@ class ComponentResult:
     available: bool
     value: float | None
     weight: float
+    role: str = "score"
 
 
 @dataclass
@@ -208,6 +241,9 @@ class ScoreResult:
     evidence_completeness: float
     components: list[ComponentResult]
     reason: str
+    # Value of the tie_break component; None when there is none, the cell has no
+    # fire evidence, the value is missing, or the cell is unscored.
+    tie_break: float | None = None
 
 
 def risk_level_for(score: int | None) -> str:
@@ -236,9 +272,9 @@ def score_cell(evidence: CellEvidence, config: ScoringConfig) -> ScoreResult:
             )
         else:
             value = evidence.attributes.get(c.name)
-        results.append(ComponentResult(c.name, value is not None, value, c.weight))
+        results.append(ComponentResult(c.name, value is not None, value, c.weight, c.role))
 
-    available = [r for r in results if r.available]
+    available = [r for r in results if r.available and r.role == "score"]
     completeness = round(sum(r.weight for r in available) / config.total_weight, 4)
 
     if completeness < config.min_evidence_completeness:
@@ -252,4 +288,6 @@ def score_cell(evidence: CellEvidence, config: ScoringConfig) -> ScoreResult:
     weighted = sum(r.weight * r.value for r in available) / sum(r.weight for r in available)
     # Snap away binary noise (0.695 * 100 == 69.4999...) before rounding half-up.
     score = min(100, max(0, math.floor(round(weighted * 100, 9) + 0.5)))
-    return ScoreResult(score, risk_level_for(score), completeness, results, "scored")
+    has_fire = evidence.observed_count > 0 or any(evidence.history_season_counts or ())
+    tie = next((r.value for r in results if r.role == "tie_break"), None) if has_fire else None
+    return ScoreResult(score, risk_level_for(score), completeness, results, "scored", tie)

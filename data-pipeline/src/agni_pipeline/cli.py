@@ -1,4 +1,4 @@
-"""Command-line interface: ``agni-pipeline run | demo | validate | fetch-firms | prepare-boundaries``."""
+"""Command-line interface: ``agni-pipeline run | demo | validate | fetch-firms | prepare-boundaries | prepare-cropland``."""
 
 from __future__ import annotations
 
@@ -10,8 +10,10 @@ from pathlib import Path
 
 from .boundary import load_districts, load_region
 from .contract import serialize_geojson, validate_feature_collection
+from .cropland import VERSIONS, prepare_cropland
 from .errors import ContractViolationError, PipelineError
 from .firms_fetch import DEFAULT_ENV_FILE, MAX_DAY_RANGE, NRT_SOURCES, VALID_SOURCES, BBox, fetch_firms, read_map_key
+from .grid import GridSpec, generate_grid
 from .pipeline import PipelineInputs, PipelineResult, run_pipeline, write_outputs
 from .prepare_boundaries import prepare_boundary
 from .reconcile import format_funnel
@@ -207,6 +209,35 @@ def _cmd_prepare_boundaries(args) -> int:
     return 0
 
 
+def _cmd_prepare_cropland(args) -> int:
+    region = load_region(args.boundary)
+    # Same boundary and cell size as `run`, so the cell_id values match the risk grid.
+    grid = generate_grid(region, GridSpec(args.cell_size_m, id_prefix="SYNTH-PB" if region.synthetic else "PB"))
+    if args.grid:
+        ids = {f["properties"]["cell_id"] for f in json.loads(args.grid.read_text(encoding="utf-8"))["features"]}
+        mine = {c.cell_id for c in grid.cells}
+        if ids != mine:
+            raise PipelineError(f"{args.grid.name}: cell_id values differ from this grid ({len(ids - mine)} only in "
+                                f"the risk grid, {len(mine - ids)} only here); check --boundary and --cell-size-m")
+    prepared = prepare_cropland(region=region, grid=grid, output=args.output, tiles_dir=args.tiles_dir,
+                                version=args.version, download=not args.no_download)
+    values = sorted(c.fraction for c in prepared.cover if c.fraction is not None)
+    print(f"ESA WorldCover {VERSIONS[args.version]} {args.version}, class 40 (general cropland, not paddy-specific)")
+    print(f"  tiles     {', '.join(p.name for p in prepared.tiles)}")
+    print(f"  cells     {len(values)} of {len(prepared.cover)} with a value"
+          + (f"; cell_id values match {args.grid.name}" if args.grid else ""))
+    if values:
+        mid = len(values) // 2
+        median = values[mid] if len(values) % 2 else (values[mid - 1] + values[mid]) / 2
+        print(f"  fraction  min {values[0]:.4f}  median {median:.4f}  mean {sum(values) / len(values):.4f}  "
+              f"max {values[-1]:.4f}")
+    print(f"  csv       {prepared.csv_path}")
+    print(f"  metadata  {prepared.metadata_path}")
+    print("Use with: agni-pipeline run ... --cell-evidence " + str(prepared.csv_path))
+    print("ESA WorldCover is CC BY 4.0; credit it wherever results are shown.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agni-pipeline",
@@ -255,6 +286,21 @@ def build_parser() -> argparse.ArgumentParser:
     prep.add_argument("--expect-count", type=int, help="warn if the number of districts differs")
     prep.add_argument("--state", type=Path, metavar="GEOJSON", help="prepared state boundary, to check district coverage")
     prep.set_defaults(func=_cmd_prepare_boundaries)
+    crop = sub.add_parser("prepare-cropland",
+                          help="per-cell cropland fraction (ESA WorldCover class 40) for --cell-evidence")
+    crop.add_argument("--boundary", type=Path, required=True, metavar="GEOJSON",
+                      help="the state boundary used for `run` (WGS84)")
+    crop.add_argument("--cell-size-m", type=int, default=5000, help="grid cell size used for `run` (default 5000)")
+    crop.add_argument("--output", type=Path, required=True, metavar="CSV", help="cell_id,cropland_fraction CSV to write")
+    crop.add_argument("--tiles-dir", type=Path, default=Path("data") / "landcover" / "worldcover",
+                      help="tile store; tiles go in <dir>/<version>/ (default data/landcover/worldcover)")
+    crop.add_argument("--version", choices=sorted(VERSIONS), default="v200",
+                      help="WorldCover release: v200 = 2021 (default), v100 = 2020")
+    crop.add_argument("--grid", type=Path, metavar="GEOJSON",
+                      help="risk_grid.geojson whose cell_id values must match exactly")
+    crop.add_argument("--no-download", action="store_true", help="fail instead of downloading missing tiles")
+    crop.set_defaults(func=_cmd_prepare_cropland)
+
     return parser
 
 
