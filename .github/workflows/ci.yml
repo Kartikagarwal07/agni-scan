@@ -36,7 +36,7 @@ jobs:
           cache: pip
           cache-dependency-path: data-pipeline/requirements.txt
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e ".[test]"
+      - run: python -m pip install -e ".[test,landcover]"
         working-directory: data-pipeline
       - run: python -m pytest
         working-directory: data-pipeline
