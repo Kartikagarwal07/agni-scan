@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { GRID_METADATA, gridFor, parseInspection, parsePagination, prioritiesFor, RequestValidationError, RISK_GRID } from "../lib/api-core.ts";
+import { resolve } from "node:path";
+import { GRID_METADATA, gridFor, parseInspection, parsePagination, prioritiesFor, RequestValidationError, resolveRiskGridPath, RISK_GRID } from "../lib/api-core.ts";
 
 test("synthetic pipeline grid preserves provenance and shared feature invariants", () => {
   assert.equal(GRID_METADATA.synthetic, true);
@@ -12,6 +13,13 @@ test("synthetic pipeline grid preserves provenance and shared feature invariants
     const ring = feature.geometry.coordinates[0];
     assert.deepEqual(ring[0], ring[ring.length - 1]);
   }
+});
+
+test("risk-grid configuration defaults to demo and resolves relative paths", () => {
+  assert.match(resolveRiskGridPath(), /data-pipeline[\\/]demo[\\/]risk_grid\.geojson$/);
+  assert.match(resolveRiskGridPath("data-pipeline/output/real/risk_grid.geojson"), /data-pipeline[\\/]output[\\/]real[\\/]risk_grid\.geojson$/);
+  const absolute = resolve(process.cwd(), "data-pipeline/output/real/risk_grid.geojson");
+  assert.equal(resolveRiskGridPath(absolute), absolute);
 });
 
 test("grid filters and priority pagination use contract query parameters", () => {
