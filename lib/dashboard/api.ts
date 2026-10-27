@@ -16,7 +16,7 @@ export type Health = { status: string; service: string };
 
 export type PriorityItem = Pick<
   RiskCellProperties,
-  "cell_id" | "district" | "risk_score" | "risk_level" | "evidence_completeness" | "verification_status"
+  "cell_id" | "district" | "risk_score" | "risk_level" | "evidence_completeness" | "verification_status" | "priority_rank"
 >;
 export type PriorityPage = { items: PriorityItem[]; total: number; limit: number; offset: number };
 export type InspectionPage = { items: Inspection[]; total: number; limit: number; offset: number };

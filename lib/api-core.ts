@@ -21,6 +21,8 @@ export type RiskCellProperties = {
   evidence_completeness: number;
   verification_status: VerificationStatus;
   analysis_date: string;
+  /** Optional within-grid order supplied by the data pipeline. Lower is earlier. */
+  priority_rank?: number;
 };
 
 export type RiskCell = {
@@ -81,7 +83,9 @@ function assertRiskGrid(value: unknown): asserts value is RiskGrid {
       properties.evidence_completeness < 0 ||
       properties.evidence_completeness > 1 ||
       !["unverified", "scheduled", "verified_fire", "verified_no_fire"].includes(properties.verification_status) ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(properties.analysis_date)
+      !/^\d{4}-\d{2}-\d{2}$/.test(properties.analysis_date) ||
+      (properties.priority_rank !== undefined &&
+        (!Number.isInteger(properties.priority_rank) || properties.priority_rank < 1))
     ) {
       throw new Error("Risk grid does not conform to the shared data contract.");
     }
@@ -133,6 +137,39 @@ export function gridFor(searchParams: URLSearchParams) {
     (date === null || properties.analysis_date === date) &&
     (riskLevel === null || properties.risk_level === riskLevel),
   );
+}
+
+export type PriorityItem = Pick<
+  RiskCellProperties,
+  "cell_id" | "district" | "risk_score" | "risk_level" | "evidence_completeness" | "verification_status" | "priority_rank"
+>;
+
+/**
+ * Prefer the optional pipeline rank when it is present. It preserves the
+ * pipeline's cropland tie-break without changing any displayed risk score.
+ * Older grids have no rank and retain the established score-first order.
+ */
+export function prioritiesFor(cells: readonly RiskCell[], district: string | null): PriorityItem[] {
+  return cells
+    .filter((cell) => district === null || cell.properties.district === district)
+    .map(({ properties }) => ({
+      cell_id: properties.cell_id,
+      district: properties.district,
+      risk_score: properties.risk_score,
+      risk_level: properties.risk_level,
+      evidence_completeness: properties.evidence_completeness,
+      verification_status: properties.verification_status,
+      ...(properties.priority_rank === undefined ? {} : { priority_rank: properties.priority_rank }),
+    }))
+    .sort((left, right) => {
+      const leftRank = left.priority_rank;
+      const rightRank = right.priority_rank;
+      if (leftRank !== undefined && rightRank !== undefined && leftRank !== rightRank) return leftRank - rightRank;
+      if (leftRank !== undefined && rightRank === undefined) return -1;
+      if (leftRank === undefined && rightRank !== undefined) return 1;
+      const scoreDifference = (right.risk_score ?? -1) - (left.risk_score ?? -1);
+      return scoreDifference || left.cell_id.localeCompare(right.cell_id);
+    });
 }
 
 export function validationError(message = "Invalid request parameters") {

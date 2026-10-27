@@ -43,6 +43,7 @@ Coordinate order: [longitude, latitude]
         "risk_level": "high",
         "observed_fire_count": 0,
         "evidence_completeness": 0.75,
+        "priority_rank": 1,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -61,6 +62,7 @@ Coordinate order: [longitude, latitude]
 | risk_level | string | low, medium, high, unknown |
 | observed_fire_count | integer | 0 or greater |
 | evidence_completeness | number | 0–1 |
+| priority_rank | integer, optional | 1 or greater. Lower values appear first in the verification queue. |
 | verification_status | string | unverified, scheduled, verified_fire, verified_no_fire |
 | analysis_date | string | YYYY-MM-DD |
 
@@ -80,6 +82,16 @@ Coordinate order: [longitude, latitude]
 5. Missing risk scores must be null, not zero.
 6. Zero detections does not prove zero burning.
 7. Mock data must be clearly labeled.
+8. `priority_rank`, when supplied, orders cells without changing `risk_score`, `risk_level`, or `evidence_completeness`.
+
+## Optional priority order
+
+`priority_rank` lets the data pipeline resolve ties without changing the risk score. The current
+pipeline uses cropland only to break ties between cells that have recent or historical fire
+evidence. Cells without fire evidence remain low priority; cropland does not promote them.
+
+The field is optional so existing grids remain valid. When it is absent, consumers should order
+cells by descending `risk_score`, place null scores last, then use a stable cell-ID order.
 
 ## Interpretation
 
@@ -91,4 +103,3 @@ NOT a scientifically validated probability of burning.
 - Data: generate conforming GeoJSON.
 - Backend: validate, store, and serve the data.
 - Frontend: display the agreed fields.
-  
