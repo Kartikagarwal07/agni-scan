@@ -13,7 +13,8 @@ def config():
 
 def test_default_config_loads(config):
     assert [c.name for c in config.components] == ["observed_detections", "historical_recurrence", "cropland_fraction"]
-    assert config.total_weight == pytest.approx(1.0)
+    assert config.total_weight == pytest.approx(0.8)  # cropland_fraction is a tie-break, not weighted
+    assert config.tie_break.name == "cropland_fraction"
     assert config.min_confidence == "nominal"
 
 
@@ -30,7 +31,7 @@ def test_zero_detections_alone_are_not_evidence_of_no_burning(config):
     assert res.risk_score is None
     assert res.risk_level == "unknown"
     assert res.reason == "zero_detections_without_independent_evidence"
-    assert res.evidence_completeness == 0.5
+    assert res.evidence_completeness == 0.625
 
 
 def test_detections_only_is_scored_when_completeness_suffices(config):
@@ -42,17 +43,18 @@ def test_detections_only_is_scored_when_completeness_suffices(config):
 
 def test_zero_detections_with_independent_evidence_is_scored(config):
     res = score_cell(CellEvidence(0, (5, 5, 5), {"cropland_fraction": 1.0}), config)
-    assert res.risk_score == 50  # (0.5*0 + 0.3*1 + 0.2*1) / 1.0
-    assert res.risk_level == "medium"
+    assert res.risk_score == 38  # (0.5*0 + 0.3*1) / 0.8; cropland adds nothing
+    assert res.risk_level == "low"
     assert res.evidence_completeness == 1.0
+    assert res.tie_break == 1.0
 
 
 def test_missing_evidence_is_not_treated_as_zero(config):
-    with_missing = score_cell(CellEvidence(5, (5, 0), {"cropland_fraction": None}), config)
-    # history (1 + 0) / 2 = 0.5; (0.5*1 + 0.3*0.5) / 0.8 = 0.8125 -> 81; treating the gap as zero would give 65.
-    assert with_missing.risk_score == 81
-    assert with_missing.evidence_completeness == 0.8
-    assert [c.available for c in with_missing.components] == [True, True, False]
+    without_history = score_cell(CellEvidence(5, None, {}), config)
+    # Only the window is available: 0.5*1 / 0.5 = 100; treating the missing history as zero would give 63.
+    assert without_history.risk_score == 100
+    assert without_history.evidence_completeness == 0.625
+    assert [c.available for c in without_history.components] == [True, False, False]
 
 
 def test_insufficient_completeness_gives_null():
@@ -113,9 +115,24 @@ def test_history_rewards_recurrence_not_one_active_season(config):
 
 def test_zero_recent_and_zero_historical_detections_score_low(config):
     """Covered seasons with no detections are evidence: the cell is low priority, not unknown."""
-    res = score_cell(CellEvidence(0, (0, 0, 0), {}), config)
+    res = score_cell(CellEvidence(0, (0, 0, 0), {"cropland_fraction": 1.0}), config)
     assert res.risk_score == 0 and res.risk_level == "low" and res.reason == "scored"
-    assert res.evidence_completeness == 0.8
+    assert res.evidence_completeness == 1.0
+    assert res.tie_break is None  # no fire evidence: cropland is not used at all
+
+
+def test_cropland_never_changes_score_or_level(config):
+    for observed, history in [(0, (5, 0, 0)), (1, (0, 0, 0)), (3, (2, 5, 1)), (6, (5, 5, 5))]:
+        results = [score_cell(CellEvidence(observed, history, {"cropland_fraction": f}), config)
+                   for f in (0.0, 0.5, 1.0, None)]
+        assert len({(r.risk_score, r.risk_level, r.evidence_completeness) for r in results}) == 1
+        assert [r.tie_break for r in results] == [0.0, 0.5, 1.0, None]
+
+
+def test_cropland_alone_cannot_make_a_cell_scored(config):
+    """Without history, zero detections stay unknown even with cropland: land cover is not fire evidence."""
+    res = score_cell(CellEvidence(0, None, {"cropland_fraction": 1.0}), config)
+    assert res.risk_level == "unknown" and res.tie_break is None
 
 
 def test_empty_history_is_unavailable(config):
@@ -137,6 +154,15 @@ def test_empty_history_is_unavailable(config):
         ([{"name": "a", "source": "firms_window", "weight": 1, "saturation_count": 1, "season_saturation_count": 1}],
          "only applies to firms_history"),
         ([{"name": "a", "source": "cell_attribute", "weight": 1}] * 2, "unique"),
+        ([{"name": "a", "source": "cell_attribute", "weight": 1, "role": "bonus"}], "'role' must be one of"),
+        ([{"name": "a", "source": "cell_attribute", "role": "tie_break"}], "at least one component"),
+        ([{"name": "o", "source": "firms_window", "weight": 1, "saturation_count": 1},
+          {"name": "a", "source": "cell_attribute", "weight": 1, "role": "tie_break"}], "has no weight"),
+        ([{"name": "o", "source": "firms_window", "role": "tie_break", "saturation_count": 1}],
+         "must be a cell_attribute"),
+        ([{"name": "o", "source": "firms_window", "weight": 1, "saturation_count": 1},
+          {"name": "a", "source": "cell_attribute", "role": "tie_break"},
+          {"name": "b", "source": "cell_attribute", "role": "tie_break"}], "at most one tie_break"),
         ([{"name": "bad name", "source": "cell_attribute", "weight": 1}], "identifier"),
         (
             [

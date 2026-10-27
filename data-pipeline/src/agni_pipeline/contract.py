@@ -30,6 +30,10 @@ REQUIRED_PROPERTIES = (
     "verification_status",
     "analysis_date",
 )
+# Optional: verification order, 1 = first. Positive integer, unique, and consistent with risk_score
+# (a lower rank never has a lower score). It never changes risk_score, risk_level or
+# evidence_completeness. Omitted for cells without a score.
+OPTIONAL_PROPERTIES = ("priority_rank",)
 RISK_LEVELS = ("low", "medium", "high", "unknown")
 VERIFICATION_STATUSES = ("unverified", "scheduled", "verified_fire", "verified_no_fire")
 PROVENANCE_SYNTHETIC = "SYNTHETIC_DEMONSTRATION_NOT_REAL_SATELLITE_DATA"
@@ -63,6 +67,7 @@ def polygon_to_geojson(poly_projected: Polygon) -> dict:
 
 def build_feature(cell_id: str, geometry: dict, properties: dict) -> dict:
     props = {k: properties[k] for k in REQUIRED_PROPERTIES}
+    props.update({k: properties[k] for k in OPTIONAL_PROPERTIES if properties.get(k) is not None})
     return {"type": "Feature", "id": cell_id, "geometry": geometry, "properties": props}
 
 
@@ -165,6 +170,7 @@ def validate_feature_collection(
             errors.append("synthetic output must carry metadata.disclaimer")
 
     seen: set[str] = set()
+    ranks: dict[int, tuple[str, float | None]] = {}
     for i, feat in enumerate(features):
         where = f"feature {i}"
         if not isinstance(feat, dict) or feat.get("type") != "Feature":
@@ -178,7 +184,7 @@ def validate_feature_collection(
         if isinstance(cid, str):
             where = f"feature {i} ({cid})"
         missing = [k for k in REQUIRED_PROPERTIES if k not in props]
-        extra = sorted(set(props) - set(REQUIRED_PROPERTIES))
+        extra = sorted(set(props) - set(REQUIRED_PROPERTIES) - set(OPTIONAL_PROPERTIES))
         if missing:
             errors.append(f"{where}: missing properties {missing}")
         if extra:
@@ -226,5 +232,26 @@ def validate_feature_collection(
         if not ok:
             errors.append(f"{where}: analysis_date must be a valid YYYY-MM-DD date")
 
+        if "priority_rank" in props:
+            rank = props["priority_rank"]
+            if not (isinstance(rank, int) and not isinstance(rank, bool) and rank >= 1):
+                errors.append(f"{where}: priority_rank must be a positive integer (got {rank!r})")
+            elif rank in ranks:
+                errors.append(f"{where}: duplicate priority_rank {rank}")
+            else:
+                ranks[rank] = (where, score if _is_number(score) else None)
+
         _check_geometry(feat.get("geometry"), where, errors, check_envelope)
+
+    # Lower rank = earlier verification: walking ranks upward, scores may only stay equal or fall.
+    previous = None
+    for rank in sorted(ranks):
+        where, score = ranks[rank]
+        if score is None:
+            errors.append(f"{where}: priority_rank {rank} is given to a cell without a risk_score")
+        elif previous is not None and score > previous[1]:
+            errors.append(f"{where}: priority_rank {rank} has a higher risk_score ({score}) than rank "
+                          f"{previous[0]} ({previous[1]}); ranks must follow risk_score")
+        else:
+            previous = (rank, score)
     return errors

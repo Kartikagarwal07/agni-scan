@@ -14,6 +14,8 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=8,<9"]
+# Only for `prepare-cropland` (reads ESA WorldCover GeoTIFF tiles).
+landcover = ["rasterio>=1.4,<2", "numpy>=1.24"]
 
 [project.scripts]
 agni-pipeline = "agni_pipeline.cli:main"

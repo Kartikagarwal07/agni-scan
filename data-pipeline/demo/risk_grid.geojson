@@ -112,6 +112,7 @@
         {
           "name": "observed_detections",
           "source": "firms_window",
+          "role": "score",
           "weight": 0.5,
           "saturation_count": 5,
           "description": "VIIRS detections in the analysis window; 5 or more saturates the component."
@@ -119,6 +120,7 @@
         {
           "name": "historical_recurrence",
           "source": "firms_history",
+          "role": "score",
           "weight": 0.3,
           "season_saturation_count": 5,
           "description": "Recurrence across earlier seasons (calendar years before the window): each season's VIIRS detections are capped at 5, then averaged over the seasons covered, so no single active season dominates."
@@ -126,16 +128,18 @@
         {
           "name": "cropland_fraction",
           "source": "cell_attribute",
-          "weight": 0.2,
-          "description": "Share of the cell under paddy/cropland (0-1), supplied per cell_id from an authoritative land-cover product."
+          "role": "tie_break",
+          "weight": null,
+          "description": "Share of the cell classified as cropland (0-1), general cropland coverage, not paddy-specific; e.g. ESA WorldCover class 40 via prepare-cropland. Tie-break only: orders equal scores among cells with recent or historical fire evidence and never changes risk_score or risk_level."
         }
-      ]
+      ],
+      "ordering": "risk_score descending; equal scores among cells with fire evidence ordered by cropland_fraction descending; then cell_id. Written as priority_rank (1 = first) on every scored feature."
     },
     "risk_level_counts": {
       "high": 1,
       "medium": 1,
-      "low": 42,
-      "unknown": 4
+      "low": 1,
+      "unknown": 45
     },
     "contract_deviations": [],
     "warnings": []
@@ -170,10 +174,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00686-E00114",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 13,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -218,7 +222,7 @@
         "risk_score": null,
         "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.5,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -256,10 +260,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00686-E00116",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 1,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -297,10 +301,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00686-E00117",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 10,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -334,10 +338,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00686-E00118",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 19,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -371,10 +375,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00685-E00113",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 13,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -416,10 +420,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00685-E00114",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 21,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -457,10 +461,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00685-E00115",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 1,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -501,9 +505,10 @@
         "risk_score": 20,
         "risk_level": "low",
         "observed_fire_count": 1,
-        "evidence_completeness": 0.5,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
-        "analysis_date": "2026-10-26"
+        "analysis_date": "2026-10-26",
+        "priority_rank": 3
       }
     },
     {
@@ -539,10 +544,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00685-E00117",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 19,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -584,10 +589,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00685-E00118",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 27,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -629,10 +634,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00684-E00113",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 21,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -670,10 +675,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00684-E00114",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 1,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -711,10 +716,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00684-E00115",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 10,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -752,10 +757,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00684-E00116",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 19,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -796,7 +801,7 @@
         "risk_score": null,
         "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.5,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -838,10 +843,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00684-E00118",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 7,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -875,10 +880,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00684-E00119",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 16,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -916,10 +921,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00683-E00113",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 1,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -957,12 +962,13 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00683-E00114",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 56,
+        "risk_score": 40,
         "risk_level": "medium",
         "observed_fire_count": 2,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
-        "analysis_date": "2026-10-26"
+        "analysis_date": "2026-10-26",
+        "priority_rank": 2
       }
     },
     {
@@ -998,10 +1004,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00683-E00115",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 19,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1039,10 +1045,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00683-E00116",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 27,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1080,10 +1086,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00683-E00117",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 7,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1124,7 +1130,7 @@
         "risk_score": null,
         "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.5,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1166,10 +1172,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00683-E00119",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 24,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1207,10 +1213,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00682-E00113",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 10,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1248,10 +1254,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00682-E00114",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 19,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1289,10 +1295,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00682-E00115",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 27,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1342,10 +1348,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00682-E00116",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 7,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1383,10 +1389,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00682-E00117",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 16,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1424,10 +1430,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00682-E00118",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 24,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1468,7 +1474,7 @@
         "risk_score": null,
         "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.5,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1506,10 +1512,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00681-E00113",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 19,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1547,10 +1553,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00681-E00114",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 27,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1588,10 +1594,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00681-E00115",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 7,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1629,10 +1635,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00681-E00116-P1",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 16,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1670,10 +1676,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00681-E00116-P2",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 16,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1711,10 +1717,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00681-E00117",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 24,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1752,12 +1758,13 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00681-E00118",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 76,
+        "risk_score": 100,
         "risk_level": "high",
         "observed_fire_count": 6,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
-        "analysis_date": "2026-10-26"
+        "analysis_date": "2026-10-26",
+        "priority_rank": 1
       }
     },
     {
@@ -1793,10 +1800,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00681-E00119",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 13,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1834,10 +1841,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00680-E00113",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 27,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1875,10 +1882,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00680-E00114",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 7,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1916,10 +1923,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00680-E00115",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 16,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1957,10 +1964,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00680-E00116-P1",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 24,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -1998,10 +2005,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00680-E00116-P2",
         "district": "SYNTHETIC-DISTRICT-WEST",
-        "risk_score": 24,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -2039,10 +2046,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00680-E00117",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 4,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -2080,10 +2087,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00680-E00118",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 13,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }
@@ -2121,10 +2128,10 @@
       "properties": {
         "cell_id": "SYNTH-PB-5000M-N00680-E00119",
         "district": "SYNTHETIC-DISTRICT-EAST",
-        "risk_score": 21,
-        "risk_level": "low",
+        "risk_score": null,
+        "risk_level": "unknown",
         "observed_fire_count": 0,
-        "evidence_completeness": 0.7,
+        "evidence_completeness": 0.625,
         "verification_status": "unverified",
         "analysis_date": "2026-10-26"
       }

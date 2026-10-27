@@ -222,7 +222,7 @@ def run_pipeline(inp: PipelineInputs) -> PipelineResult:
             )
 
     analysis_date = end.isoformat()
-    features, explanations = [], []
+    feature_inputs, explanations = [], []
     levels: Counter = Counter()
     for cell in grid.cells:
         observed = window_assign.counts.get(cell.cell_id, 0)
@@ -241,7 +241,7 @@ def run_pipeline(inp: PipelineInputs) -> PipelineResult:
             "verification_status": "unverified",
             "analysis_date": analysis_date,
         }
-        features.append(build_feature(cell.cell_id, polygon_to_geojson(cell.geometry_projected), props))
+        feature_inputs.append((cell, props))
         row = {
             "cell_id": cell.cell_id,
             "district": district,
@@ -253,14 +253,29 @@ def run_pipeline(inp: PipelineInputs) -> PipelineResult:
         }
         for comp in result.components:
             row[f"{comp.name}_value"] = None if comp.value is None else round(comp.value, 4)
-            row[f"{comp.name}_weight"] = comp.weight
+            row[f"{comp.name}_weight"] = comp.weight if comp.role == "score" else None
         row.update(
             evidence_completeness=result.evidence_completeness,
             risk_score=result.risk_score,
             risk_level=result.risk_level,
             score_reason=result.reason,
+            tie_break_value=None if result.tie_break is None else round(result.tie_break, 4),
+            priority_rank=None,
         )
         explanations.append(row)
+
+    # Verification order: score first; the tie-break only separates equal scores (and only for cells
+    # with fire evidence, see scoring.py); cell_id makes the order total. Unscored cells get no rank.
+    scored = [r for r in explanations if r["risk_score"] is not None]
+    scored.sort(key=lambda r: (-r["risk_score"], r["tie_break_value"] is None, -(r["tie_break_value"] or 0.0),
+                               r["cell_id"]))
+    for rank, row in enumerate(scored, start=1):
+        row["priority_rank"] = rank
+    # Same rank in the GeoJSON (optional contract property); explanations follow grid-cell order.
+    features = []
+    for (cell, props), row in zip(feature_inputs, explanations):
+        props["priority_rank"] = row["priority_rank"]
+        features.append(build_feature(cell.cell_id, polygon_to_geojson(cell.geometry_projected), props))
 
     status = window_assign.status_counts
     metadata = {

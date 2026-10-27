@@ -10,6 +10,7 @@ from agni_pipeline.cli import main
 from agni_pipeline.contract import (
     PROVENANCE_OBSERVED,
     PROVENANCE_SYNTHETIC,
+    OPTIONAL_PROPERTIES,
     REQUIRED_PROPERTIES,
     validate_feature_collection,
 )
@@ -48,7 +49,8 @@ def test_demo_output_conforms_to_contract(demo_result):
     assert fc["type"] == "FeatureCollection" and fc["features"]
     for f in fc["features"]:
         assert f["type"] == "Feature"
-        assert tuple(f["properties"]) == REQUIRED_PROPERTIES
+        ranked = f["properties"]["risk_score"] is not None
+        assert tuple(f["properties"]) == REQUIRED_PROPERTIES + (OPTIONAL_PROPERTIES if ranked else ())
         assert f["id"] == f["properties"]["cell_id"]
         assert f["geometry"]["type"] == "Polygon"
         p = f["properties"]
@@ -131,6 +133,31 @@ def test_history_in_the_window_year_is_flagged_as_partial_season(fixtures_dir, w
     res = run_pipeline(demo_inputs(fixtures_dir, history_paths=[earlier_this_year], cell_evidence_path=None))
     assert res.metadata["detections"]["historical_seasons"] == [2026]
     assert any("partial season" in w for w in res.metadata["warnings"])
+
+
+def test_priority_rank_orders_by_score_then_cropland_among_fire_evidence(demo_result):
+    rows = [r for r in demo_result.explanations if r["priority_rank"] is not None]
+    rows.sort(key=lambda r: r["priority_rank"])
+    assert [r["priority_rank"] for r in rows] == list(range(1, len(rows) + 1))
+    assert all(r["risk_score"] is not None for r in rows)
+    for a, b in zip(rows, rows[1:]):
+        assert a["risk_score"] >= b["risk_score"]
+        if a["risk_score"] == b["risk_score"] and b["tie_break_value"] is not None:
+            assert a["tie_break_value"] is not None and a["tie_break_value"] >= b["tie_break_value"]
+    for r in demo_result.explanations:
+        has_fire = r["observed_fire_count"] > 0 or bool(r["historical_fire_count"])
+        if not has_fire:
+            assert r["tie_break_value"] is None
+    unscored = [r for r in demo_result.explanations if r["risk_score"] is None]
+    assert all(r["priority_rank"] is None for r in unscored)
+
+
+def test_cropland_does_not_change_any_score(fixtures_dir):
+    with_crop = run_pipeline(demo_inputs(fixtures_dir))
+    without = run_pipeline(demo_inputs(fixtures_dir, cell_evidence_path=None))
+    key = lambda res: [(f["properties"]["risk_score"], f["properties"]["risk_level"],  # noqa: E731
+                        f["properties"]["evidence_completeness"]) for f in res.collection["features"]]
+    assert key(with_crop) == key(without)
 
 
 def test_write_outputs(tmp_path, demo_result):
@@ -258,6 +285,55 @@ def test_validator_detects_violations(demo_result, mutate, message):
     mutate(fc["features"][0])
     errors = validate_feature_collection(fc)
     assert any(message in e for e in errors), errors
+
+
+def _ranked(fc):
+    return sorted((f for f in fc["features"] if "priority_rank" in f["properties"]),
+                  key=lambda f: f["properties"]["priority_rank"])
+
+
+@pytest.mark.parametrize(
+    "rank, message",
+    [(0, "positive integer"), (-3, "positive integer"), (1.5, "positive integer"), (True, "positive integer"),
+     ("1", "positive integer"), (None, "positive integer")],
+)
+def test_validator_checks_priority_rank_type(demo_result, rank, message):
+    fc = copy.deepcopy(demo_result.collection)
+    _ranked(fc)[0]["properties"]["priority_rank"] = rank
+    assert any(message in e for e in validate_feature_collection(fc))
+
+
+def test_validator_checks_priority_rank_consistency(demo_result):
+    fc = copy.deepcopy(demo_result.collection)
+    first, second = _ranked(fc)[:2]
+    assert first["properties"]["risk_score"] > second["properties"]["risk_score"]
+    second["properties"]["priority_rank"] = 1
+    assert any("duplicate priority_rank" in e for e in validate_feature_collection(fc))
+
+    fc = copy.deepcopy(demo_result.collection)
+    first, second = _ranked(fc)[:2]
+    first["properties"]["priority_rank"], second["properties"]["priority_rank"] = 2, 1
+    assert any("ranks must follow risk_score" in e for e in validate_feature_collection(fc))
+
+    fc = copy.deepcopy(demo_result.collection)
+    _ranked(fc)[-1]["properties"].update(risk_score=None, risk_level="unknown")
+    assert any("without a risk_score" in e for e in validate_feature_collection(fc))
+
+    fc = copy.deepcopy(demo_result.collection)
+    for f in fc["features"]:
+        f["properties"].pop("priority_rank", None)
+    assert validate_feature_collection(fc) == []  # the field is optional
+
+
+def test_geojson_priority_rank_matches_explanations_and_leaves_scores_alone(demo_result):
+    by_id = {r["cell_id"]: r for r in demo_result.explanations}
+    for f in demo_result.collection["features"]:
+        p, row = f["properties"], by_id[f["id"]]
+        assert p.get("priority_rank") == row["priority_rank"]
+        assert (p["risk_score"], p["risk_level"], p["evidence_completeness"]) == (
+            row["risk_score"], row["risk_level"], row["evidence_completeness"])
+    ranks = [f["properties"]["priority_rank"] for f in _ranked(demo_result.collection)]
+    assert ranks == list(range(1, len(ranks) + 1))
 
 
 def test_validator_metadata_rules(demo_result):

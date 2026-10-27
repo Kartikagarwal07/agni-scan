@@ -35,13 +35,21 @@ If `Activate.ps1` is blocked, allow local scripts for your user once with
 `requirements.txt` pins the exact versions this was verified with (shapely 2.2.0, pyproj 3.8.0,
 pytest 8.4.2). Both shapely and pyproj ship Windows wheels, so you don't need GDAL, conda, or geopandas.
 
+Only `prepare-cropland` (§4.6) reads rasters. It needs the optional `landcover` extra (rasterio, which
+also ships Windows wheels):
+
+```powershell
+python -m pip install -e ".[landcover]"
+```
+
 ## 2. Run the tests
 
 ```powershell
 python -m pytest
 ```
 
-Expected output: `144 passed`. No test needs the network or a FIRMS key.
+Expected output: `167 passed`. No test needs the network or a FIRMS key. Without the `landcover`
+extra, the 6 cropland tests are skipped.
 
 ## 3. Deterministic demo grid
 
@@ -73,7 +81,7 @@ Expected output of `demo --output-dir .\demo`:
 Analysis window : 2026-10-20 .. 2026-10-26 (7 days, UTC acq_date)
 Grid cells      : 48 x 5000 m (EPSG:32643)
 Detections      : 10 in window, 9 assigned, 1 outside region, 0 rows rejected
-Risk levels     : high=1, medium=1, low=42, unknown=4
+Risk levels     : high=1, medium=1, low=1, unknown=45
 Contract check  : PASSED (docs/DATA_CONTRACT.md v1.0.0)
 Detection funnel (window files; every row is accounted for):
   file                              rows_read  rejected_invalid  valid  duplicates  ...  outside_window  outside_region  in_dropped_sliver  assigned
@@ -103,8 +111,8 @@ The same checks run standalone through `agni-pipeline validate <file>`. Add
 top of that, `demo --check` guards against drift: the pytest suite fails if the committed demo no
 longer matches a fresh run.
 
-The demo does not use the historical FIRMS fixture. That leaves zero-detection cells without a
-cropland value with no independent evidence, which shows how `unknown` is produced. Add
+The demo does not use the historical FIRMS fixture. That leaves zero-detection cells with no
+independent fire evidence (cropland is only a tie-break), which shows how `unknown` is produced. Add
 `--history-firms .\fixtures\synthetic\synthetic_firms_viirs_history.csv` to a `run` command to see
 the historical component.
 
@@ -258,6 +266,38 @@ $hist = Get-ChildItem data\firms\history -Recurse -Filter *.csv | ForEach-Object
 python -m agni_pipeline run ... @hist
 ```
 
+### 4.6 Cropland evidence (`--cell-evidence`)
+
+```powershell
+.\scripts\cropland.ps1 -Grid output\<a real run>\risk_grid.geojson
+python -m agni_pipeline run ... --cell-evidence data\evidence\cropland_worldcover2021_5000m.csv
+```
+
+`prepare-cropland` builds the same grid as `run`, from the same boundary and `--cell-size-m`, so the
+`cell_id` values match. `-Grid` / `--grid` fails if they differ from an existing risk grid. The
+command does this:
+
+- **Downloads the tiles.** It fetches the ESA WorldCover 10 m tiles (3° × 3°, EPSG:4326) that cover
+  the boundary into `data\landcover\worldcover\<version>\`. The default is `v200`, the 2021 map;
+  `v100` is 2020. Tiles that are already present are skipped.
+- **Computes the fraction for every cell:**
+
+  ```text
+  cropland_fraction = pixels of class 40 (Cropland) / pixels with any class (value != 0)
+  ```
+
+  It counts the 10 m pixels whose centre lies inside the clipped cell. Within a 5 km cell, pixel
+  area varies by less than 0.1 %. A cell with no valid pixel gets a blank value (unavailable),
+  never 0.
+- **Writes the outputs:** `data\evidence\cropland_worldcover<year>_<size>m.csv`
+  (`cell_id,cropland_fraction`), plus `.meta.json` with the product, licence, class, method and the
+  SHA-256 of every tile and of the CSV.
+
+This is **general cropland coverage**. WorldCover does not separate paddy from other crops, so do
+not present it as paddy area. ESA WorldCover is CC BY 4.0: credit "© ESA WorldCover project /
+Contains modified Copernicus Sentinel data processed by ESA WorldCover consortium" wherever results
+are shown.
+
 ## 5. Input requirements
 
 ### FIRMS VIIRS CSV
@@ -333,14 +373,14 @@ never inferred or guessed.
 | --- | --- | --- |
 | `observed_detections` (0.5) | FIRMS, analysis window | `min(count / 5, 1)` |
 | `historical_recurrence` (0.3) | `--history-firms` | mean over covered seasons of `min(count_season / 5, 1)`; unavailable if no history file |
-| `cropland_fraction` (0.2) | `--cell-evidence` column | as supplied (0–1); blank/`NA` means unavailable |
+| `cropland_fraction` (tie-break, no weight) | `--cell-evidence` column | never changes the score; orders equal scores (see below) |
 
-- `evidence_completeness` is the sum of the weights of available components divided by the total weight.
+- `evidence_completeness` is the sum of the weights of available score components divided by their total weight.
 - `risk_score` is `round_half_up(100 × weighted mean of available components)`. Missing evidence is
   never counted as zero.
 - The score is `null` / `unknown` when completeness is below `min_evidence_completeness` (0.5).
 - The score is also `null` / `unknown` when a cell has **zero detections and no independent evidence**
-  (history or cell attributes).
+  (in the defaults, no history; a tie-break never counts as evidence).
 - Levels follow the contract thresholds: low 0–39, medium 40–69, high 70–100.
 
 **Historical recurrence.** A *season* is the calendar year of `acq_date`: Punjab's paddy-residue season
@@ -364,12 +404,23 @@ the window's own year, because that season is partial. `score_explanations.csv` 
 `historical_fire_count_by_season` and `historical_seasons_with_fire` for every cell.
 
 The weights are expert-set defaults. They have not been fitted or validated against ground truth,
-and you can tune them in the JSON config. With the defaults, a cell with zero window detections can
-reach at most 50 (medium). Detected fires come first in the verification queue, and a "low" score
-means "lower relative priority", never "no burning".
+and you can tune them in the JSON config. Recent detections are the main signal (0.5) and historical
+recurrence the secondary one (0.3). With the defaults, a cell with zero window detections can reach
+at most 38 (low), so detected fires come first in the verification queue. A "low" score means "lower
+relative priority", never "no burning".
+
+**Cropland is a tie-break, not a score component** (`"role": "tie_break"` in the config). It never
+changes `risk_score`, `risk_level` or `evidence_completeness`. Among cells with **equal scores that
+have fire evidence** (a detection in the window or in any historical season), the cell with more
+cropland ranks first. Cells without fire evidence get no tie-break value, so cropland alone never
+raises a cell's priority. The resulting `priority_rank` (score descending, then tie-break
+descending, then `cell_id`; unscored cells have no rank) is written to every scored feature in
+`risk_grid.geojson` and to `score_explanations.csv`, with `tie_break_value`.
+`metadata.scoring.ordering` describes the order (see §8).
 
 The cell-evidence CSV has a `cell_id` column plus one column per `cell_attribute` component, with
 values in [0, 1]. It must be prepared for the same `--cell-size-m`, because IDs encode the size.
+`prepare-cropland` (§4.6) writes one for `cropland_fraction`.
 
 ## 7. Layout
 
@@ -387,12 +438,14 @@ data-pipeline/
     reconcile.py    detection funnel: where every input row went
     firms_fetch.py  NASA FIRMS Area API download + manifest
     prepare_boundaries.py  extract/reproject authoritative boundaries to WGS84
-    cli.py          `agni-pipeline run | demo | validate | fetch-firms | prepare-boundaries`
+    cropland.py     ESA WorldCover class-40 fraction per cell (optional rasterio)
+    cli.py          `agni-pipeline run | demo | validate | fetch-firms | prepare-boundaries | prepare-cropland`
     default_scoring.json
   fixtures/synthetic/   SYNTHETIC test inputs (not real data)
   demo/                 committed deterministic demo output (SYNTHETIC)
   scripts/real-data.ps1 one-command reproducible real-data run
   scripts/history-firms.ps1  historical SP seasons for --history-firms
+  scripts/cropland.ps1  WorldCover cropland fraction for --cell-evidence
   data/, output/        real inputs and results (git-ignored)
   tests/                pytest suite
 ```
@@ -415,6 +468,13 @@ data-pipeline/
   a contract change agreed by the team.
 - **`verification_status`.** The pipeline always emits `verification_status: "unverified"`. Field
   results belong to the backend.
+- **Optional `priority_rank`.** Every scored cell carries `priority_rank`, a positive integer where
+  1 is verified first. The order is `risk_score` descending, then the cropland tie-break (only for
+  cells with fire evidence), then `cell_id`. Cells with `risk_score: null` have no rank and omit the
+  field. The rank never changes `risk_score`, `risk_level` or `evidence_completeness`. The validator
+  checks that ranks are positive integers, unique, given only to scored cells, and never put a
+  lower score before a higher one. To show the tie-break, sort by `priority_rank` (ascending), not
+  by `risk_score` alone.
 
 ## 9. Real datasets
 
@@ -425,7 +485,7 @@ None of these are in the repository, and the pipeline never fabricates them.
 | NASA FIRMS VIIRS 375 m active fires (S-NPP, NOAA-20, NOAA-21) | <https://firms.modaps.eosdis.nasa.gov/api/area/>, with a free MAP_KEY | `--firms`, downloaded by `fetch-firms` |
 | Punjab state and district boundaries | Survey of India data distributed by NWIC: `state_nwic_geojson.zip` and `district_nwic_geojson.zip` (EPSG:7755, `src_agency` "Survey of India (SOI)") | `--boundary` and `--districts`, after `prepare-boundaries` |
 | Earlier-season detections (optional) | FIRMS archive downloads, `VIIRS_*_SP` | `--history-firms` |
-| Cropland share per cell (optional) | ESA WorldCover 10 m, class 40 (CC BY 4.0) | `--cell-evidence` |
+| Cropland share per cell (optional) | ESA WorldCover 10 m 2021 v200, class 40 Cropland (CC BY 4.0), <https://esa-worldcover.org>; tiles from `esa-worldcover.s3.eu-central-1.amazonaws.com` | `--cell-evidence`, after `prepare-cropland` (general cropland, not paddy) |
 
 **Known limitation of the current boundary files.** They contain **22** Punjab districts.
 Malerkotla, created in 2021 as the 23rd, is absent, and its area falls under **Sangrur**.
