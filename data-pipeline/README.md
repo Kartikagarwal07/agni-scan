@@ -41,7 +41,7 @@ pytest 8.4.2). Both shapely and pyproj ship Windows wheels, so you don't need GD
 python -m pytest
 ```
 
-Expected output: `120 passed`.
+Expected output: `136 passed`. No test needs the network or a FIRMS key.
 
 ## 3. Deterministic demo grid
 
@@ -75,10 +75,15 @@ Grid cells      : 48 x 5000 m (EPSG:32643)
 Detections      : 10 in window, 9 assigned, 1 outside region, 0 rows rejected
 Risk levels     : high=1, medium=1, low=42, unknown=4
 Contract check  : PASSED (docs/DATA_CONTRACT.md v1.0.0)
+Detection funnel (window files; every row is accounted for):
+  file                              rows_read  rejected_invalid  valid  duplicates  ...  outside_window  outside_region  in_dropped_sliver  assigned
+  synthetic_firms_viirs_window.csv         13                 0     13           1  ...               1               1                  0         9
+  TOTAL                                    13                 0     13           1  ...               1               1                  0         9
   geojson      demo\risk_grid.geojson
   explanations demo\score_explanations.csv
   assignments  demo\detection_assignments.csv
   rejections   demo\rejected_rows.csv
+  funnel       demo\detection_funnel.csv
 ```
 
 **Validation approach.** Every run validates its own output against `DATA_CONTRACT.md` before
@@ -105,7 +110,97 @@ the historical component.
 
 ## 4. Running on real data
 
-Place the real files in `data-pipeline\data\` (git-ignored), then:
+Real inputs and results live in `data-pipeline\data\` and `data-pipeline\output\`. Both are
+git-ignored, so real data never reaches GitHub.
+
+### 4.1 One command (reproducible)
+
+Prerequisites:
+- a free NASA FIRMS MAP_KEY in the repository's `.env.local` as `FIRMS_MAP_KEY=...`;
+- the Survey of India boundary downloads from NWIC: `state_nwic_geojson.zip` and
+  `district_nwic_geojson.zip` (see §9).
+
+```powershell
+# Latest days, ending today (UTC)
+.\scripts\real-data.ps1 -StateZip $HOME\Downloads\state_nwic_geojson.zip -DistrictZip $HOME\Downloads\district_nwic_geojson.zip
+
+# Fixed dates: UTC acq_date 2026-10-23 .. 2026-10-26
+.\scripts\real-data.ps1 -StateZip ... -DistrictZip ... -StartDate 2026-10-23 -Days 4
+
+# Re-run an earlier download without contacting FIRMS
+.\scripts\real-data.ps1 -StateZip ... -DistrictZip ... -FirmsDir data\firms\20261027-060500
+```
+
+The script runs three steps:
+
+1. **`prepare-boundaries`.** Reads each zip in memory, without extracting it, and keeps Punjab
+   (`stcode == "03"`). It reprojects the boundaries from the files' EPSG:7755 (India LCC) to WGS84
+   and writes `data\boundaries\punjab_state.geojson` and `punjab_districts.geojson`. Each output
+   records the source zip, its SHA-256 and the source CRS. This step is skipped when the files
+   already exist; pass `-Force` to rebuild them.
+2. **`fetch-firms`.** Downloads `VIIRS_SNPP_NRT`, `VIIRS_NOAA20_NRT` and `VIIRS_NOAA21_NRT` for the
+   state's bounding box (padded by 0.05° and rounded outward to 0.01°) into
+   `data\firms\<UTC timestamp>\`. It also writes `manifest.json`, which records the date range, the
+   bbox, the row count and SHA-256 of each file, and the request URL with the key replaced by
+   `<MAP_KEY>`.
+3. **`run`.** Builds the grid for exactly the fetched dates, into
+   `output\real-<end date>-<fetch timestamp>\`.
+
+**What "reproducible" means here.** Re-running with `-FirmsDir` on a saved download gives an
+identical grid. Re-downloading the same dates later is not guaranteed to give identical rows,
+because FIRMS replaces near-real-time (NRT) data with standard-processing (SP) data after a few
+weeks. Keep the `data\firms\<timestamp>\` folder of any run you report.
+
+Results built from FIRMS must credit NASA FIRMS wherever they are shown.
+
+### 4.2 Individual commands
+
+```powershell
+python -m agni_pipeline prepare-boundaries <state.zip> --output data\boundaries\punjab_state.geojson --kind state --value 03
+python -m agni_pipeline prepare-boundaries <district.zip> --output data\boundaries\punjab_districts.geojson `
+  --kind districts --value 03 --expect-count 23 --state data\boundaries\punjab_state.geojson
+python -m agni_pipeline fetch-firms --output-dir data\firms\my-fetch --boundary data\boundaries\punjab_state.geojson --days 5
+```
+
+`fetch-firms` reads `FIRMS_MAP_KEY` from the environment first, then from `.env.local`
+(`--env-file` to change it). The Area API allows 1 to 5 days per request
+(`--start-date` = first day) and 5,000 transactions per 10 minutes per key.
+
+### 4.3 Detection funnel (reconciling counts)
+
+Every run writes `detection_funnel.csv`: one row per FIRMS file plus a TOTAL row. The run fails if
+these two identities do not hold:
+
+```text
+rows_read = rejected_invalid + valid
+valid     = duplicates + removed_fire_type + removed_low_confidence + removed_missing_confidence
+          + outside_window + outside_region + in_dropped_sliver + assigned
+```
+
+Worked example, real run for 2026-10-23 .. 2026-10-26 (fetch `20261027-060500`):
+
+| File | rows_read | removed_low_confidence | outside_region | assigned (in Punjab) |
+| --- | ---: | ---: | ---: | ---: |
+| VIIRS_SNPP_NRT | 442 | 13 | 260 | 169 |
+| VIIRS_NOAA20_NRT | 501 | 15 | 265 | 221 |
+| VIIRS_NOAA21_NRT | 403 | 14 | 233 | 156 |
+| **TOTAL** | **1,346** | **42** | **758** | **546** |
+
+So 1,346 rows read = 42 low-confidence + 758 outside Punjab + 546 assigned. No rows were invalid,
+duplicated or outside the window.
+
+Notes from reconciling the first manual download of the same dates:
+- Its box (`73.8,29.5,77.0,32.6`) was slightly larger, so it had 1,398 rows: 44 low-confidence and
+  808 outside Punjab. The Punjab result was identical: the same 546 detections and the same 2,256
+  cells.
+- The "44" were exactly the rows with `confidence = l`. The default filter keeps `nominal` and
+  `high`; see `firms_filters` in the scoring config.
+- FIRMS CSVs have no trailing newline, so `wc -l` under-counts each file by one. Use the funnel's
+  `rows_read`, not a line count.
+
+### 4.4 Manual `run`
+
+With your own files in `data-pipeline\data\`:
 
 ```powershell
 python -m agni_pipeline run `
@@ -145,6 +240,7 @@ or contract error, and the message names the file, line, or field. Exit code `2`
 | `score_explanations.csv` | One row per cell: every component's value and weight, completeness, score, and the reason (`scored`, `insufficient_evidence`, `zero_detections_without_independent_evidence`). |
 | `detection_assignments.csv` | Every in-window detection that passed the filters, with its cell or `outside_region`. |
 | `rejected_rows.csv` | Every rejected input row, with file, line number and reason. |
+| `detection_funnel.csv` | Where every input row went, per FIRMS file (see §4.3). |
 
 ## 5. Input requirements
 
@@ -252,10 +348,15 @@ data-pipeline/
     evidence.py     optional per-cell evidence CSV
     contract.py     contract GeoJSON builder and validator
     pipeline.py     end-to-end orchestration and output files
-    cli.py          `agni-pipeline run | demo | validate`
+    reconcile.py    detection funnel: where every input row went
+    firms_fetch.py  NASA FIRMS Area API download + manifest
+    prepare_boundaries.py  extract/reproject authoritative boundaries to WGS84
+    cli.py          `agni-pipeline run | demo | validate | fetch-firms | prepare-boundaries`
     default_scoring.json
   fixtures/synthetic/   SYNTHETIC test inputs (not real data)
   demo/                 committed deterministic demo output (SYNTHETIC)
+  scripts/real-data.ps1 one-command reproducible real-data run
+  data/, output/        real inputs and results (git-ignored)
   tests/                pytest suite
 ```
 
@@ -278,16 +379,21 @@ data-pipeline/
 - **`verification_status`.** The pipeline always emits `verification_status: "unverified"`. Field
   results belong to the backend.
 
-## 9. Real datasets you must supply
+## 9. Real datasets
 
-None of these are included, and the pipeline never fabricates them:
+None of these are in the repository, and the pipeline never fabricates them.
 
-1. **NASA FIRMS VIIRS 375 m active-fire CSVs** (S-NPP, NOAA-20, NOAA-21) for the analysis window,
-   downloaded by you from <https://firms.modaps.eosdis.nasa.gov/>, plus optional archive files for
-   earlier seasons.
-2. **Authoritative Punjab state boundary** (for example from Survey of India or the Punjab Remote
-   Sensing Centre), converted to WGS84 GeoJSON.
-3. **Authoritative Punjab district boundaries** for the current district set, with names in a
-   consistent property.
-4. Optionally, **per-cell cropland/paddy fraction** derived from an authoritative land-cover
-   product, keyed by this pipeline's cell IDs.
+| Dataset | Where | Used as |
+| --- | --- | --- |
+| NASA FIRMS VIIRS 375 m active fires (S-NPP, NOAA-20, NOAA-21) | <https://firms.modaps.eosdis.nasa.gov/api/area/>, with a free MAP_KEY | `--firms`, downloaded by `fetch-firms` |
+| Punjab state and district boundaries | Survey of India data distributed by NWIC: `state_nwic_geojson.zip` and `district_nwic_geojson.zip` (EPSG:7755, `src_agency` "Survey of India (SOI)") | `--boundary` and `--districts`, after `prepare-boundaries` |
+| Earlier-season detections (optional) | FIRMS archive downloads, `VIIRS_*_SP` | `--history-firms` |
+| Cropland share per cell (optional) | ESA WorldCover 10 m, class 40 (CC BY 4.0) | `--cell-evidence` |
+
+**Known limitation of the current boundary files.** They contain **22** Punjab districts.
+Malerkotla, created in 2021 as the 23rd, is absent, and its area falls under **Sangrur**.
+`prepare-boundaries --expect-count 23` warns about this. Use a newer Survey of India release when one
+is available, and do not draw a Malerkotla boundary by hand.
+
+The boundary files' licence terms are set by the publisher. Check them before redistributing derived
+files.

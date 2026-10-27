@@ -24,6 +24,7 @@ from .errors import ContractViolationError, InputValidationError, PipelineError
 from .evidence import load_cell_evidence
 from .firms import Detection, FirmsLoadResult, RowRejection, apply_quality_filters, deduplicate, load_firms_csv
 from .grid import Assignment, GridSpec, assign_detections, assign_districts, generate_grid
+from .reconcile import STAGES, FunnelRow, detection_funnel
 from .scoring import CellEvidence, load_config, score_cell
 
 SYNTHETIC_DISCLAIMER = (
@@ -71,6 +72,7 @@ class PipelineResult:
     rejections: list[RowRejection]
     assignments: list[Assignment]
     warnings: list[str]
+    funnel: list[FunnelRow] = field(default_factory=list)
 
     @property
     def metadata(self) -> dict:
@@ -314,7 +316,15 @@ def run_pipeline(inp: PipelineInputs) -> PipelineResult:
     errors = validate_feature_collection(collection, allow_unavailable_district=inp.allow_missing_districts)
     if errors:
         raise ContractViolationError(errors)
-    return PipelineResult(collection, explanations, rejections, window_assign.assignments, warnings)
+    funnel = detection_funnel(
+        firms_results,
+        all_dets,
+        min_confidence=config.min_confidence,
+        exclude_fire_types=config.exclude_fire_types,
+        window=(start, end),
+        assignments=window_assign.assignments,
+    )
+    return PipelineResult(collection, explanations, rejections, window_assign.assignments, warnings, funnel)
 
 
 def _write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
@@ -333,6 +343,7 @@ def write_outputs(result: PipelineResult, out_dir: str | Path, indent: int | Non
         "explanations": out / "score_explanations.csv",
         "assignments": out / "detection_assignments.csv",
         "rejections": out / "rejected_rows.csv",
+        "funnel": out / "detection_funnel.csv",
     }
     write_geojson(paths["geojson"], result.collection, indent)
     if result.explanations:
@@ -355,6 +366,7 @@ def write_outputs(result: PipelineResult, out_dir: str | Path, indent: int | Non
     _write_csv(paths["assignments"], assign_rows,
                ["source_file", "line", "latitude", "longitude", "acq_date", "acq_time", "satellite",
                 "confidence", "cell_id", "status"])
+    _write_csv(paths["funnel"], [row.as_dict() for row in result.funnel], ["source_file", *STAGES])
     _write_csv(paths["rejections"], [{"source_file": r.source_file, "line": r.row, "reason": r.reason}
                                      for r in result.rejections], ["source_file", "line", "reason"])
     return paths

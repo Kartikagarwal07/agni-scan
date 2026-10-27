@@ -299,15 +299,28 @@ def apply_quality_filters(
     confidence is configured, since it cannot be shown to meet it.
     """
     result = FilterResult(kept=[])
-    threshold = CONFIDENCE_LEVELS.index(min_confidence) if min_confidence else None
-    excluded = set(exclude_fire_types)
     for d in detections:
-        if d.fire_type is not None and d.fire_type in excluded:
-            result.removed[f"type_{d.fire_type}_{FIRE_TYPES[d.fire_type].replace(' ', '_')}"] += 1
-        elif threshold is not None and d.confidence is None:
-            result.removed["confidence_missing"] += 1
-        elif threshold is not None and CONFIDENCE_LEVELS.index(d.confidence) < threshold:
-            result.removed[f"confidence_below_{min_confidence}"] += 1
-        else:
+        reason = quality_reason(d, min_confidence=min_confidence, exclude_fire_types=exclude_fire_types)
+        if reason is None:
             result.kept.append(d)
+        else:
+            result.removed[reason] += 1
     return result
+
+
+def quality_reason(
+    d: Detection,
+    *,
+    min_confidence: str | None,
+    exclude_fire_types: tuple[int, ...] | list[int],
+) -> str | None:
+    """Why a detection fails the quality filters, or None when it passes."""
+    if d.fire_type is not None and d.fire_type in set(exclude_fire_types):
+        return f"type_{d.fire_type}_{FIRE_TYPES[d.fire_type].replace(' ', '_')}"
+    if min_confidence is None:
+        return None
+    if d.confidence is None:
+        return "confidence_missing"
+    if CONFIDENCE_LEVELS.index(d.confidence) < CONFIDENCE_LEVELS.index(min_confidence):
+        return f"confidence_below_{min_confidence}"
+    return None

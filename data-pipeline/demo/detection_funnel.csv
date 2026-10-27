@@ -1,0 +1,3 @@
+source_file,rows_read,rejected_invalid,valid,duplicates,removed_fire_type,removed_low_confidence,removed_missing_confidence,outside_window,outside_region,in_dropped_sliver,assigned
+synthetic_firms_viirs_window.csv,13,0,13,1,0,1,0,1,1,0,9
+TOTAL,13,0,13,1,0,1,0,1,1,0,9
