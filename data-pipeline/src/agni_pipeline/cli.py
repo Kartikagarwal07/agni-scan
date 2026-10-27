@@ -1,4 +1,4 @@
-"""Command-line interface: ``agni-pipeline run | validate | demo``."""
+"""Command-line interface: ``agni-pipeline run | demo | validate | fetch-firms | prepare-boundaries``."""
 
 from __future__ import annotations
 
@@ -8,9 +8,13 @@ import json
 import sys
 from pathlib import Path
 
+from .boundary import load_districts, load_region
 from .contract import serialize_geojson, validate_feature_collection
 from .errors import ContractViolationError, PipelineError
+from .firms_fetch import DEFAULT_ENV_FILE, MAX_DAY_RANGE, NRT_SOURCES, VALID_SOURCES, BBox, fetch_firms, read_map_key
 from .pipeline import PipelineInputs, PipelineResult, run_pipeline, write_outputs
+from .prepare_boundaries import prepare_boundary
+from .reconcile import format_funnel
 
 PIPELINE_ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = PIPELINE_ROOT / "fixtures" / "synthetic"
@@ -69,6 +73,10 @@ def _report(result: PipelineResult, paths: dict[str, Path]) -> None:
     for dev in m["contract_deviations"]:
         print(f"CONTRACT DEVIATION: {dev}")
     print("Contract check  : PASSED (docs/DATA_CONTRACT.md v" + m["contract_version"] + ")")
+    if result.funnel:
+        print("Detection funnel (window files; every row is accounted for):")
+        for line in format_funnel(result.funnel).splitlines():
+            print(f"  {line}")
     for name, path in paths.items():
         if path.exists():
             print(f"  {name:<13}{path}")
@@ -151,6 +159,54 @@ def _cmd_validate(args) -> int:
     return 0
 
 
+def _cmd_fetch_firms(args) -> int:
+    if args.bbox:
+        bbox = BBox.parse(args.bbox)
+    elif args.boundary:
+        bbox = BBox.around(load_region(args.boundary).geometry_wgs84.bounds)
+    else:
+        raise PipelineError("give --boundary (bbox is derived from it) or an explicit --bbox west,south,east,north")
+    sources = tuple(args.source) if args.source else NRT_SOURCES
+    files, manifest = fetch_firms(
+        out_dir=args.output_dir,
+        bbox=bbox,
+        day_range=args.days,
+        start_date=args.start_date,
+        sources=sources,
+        map_key=read_map_key(args.env_file),
+    )
+    first, last = manifest["acq_date_range"]
+    print(f"FIRMS {', '.join(sources)} | bbox {bbox.as_param()} | acq_date {first} .. {last} (UTC)")
+    for f in files:
+        print(f"  {f.source:<18}{f.rows:>6} rows  {f.path}")
+    print(f"  manifest          {args.output_dir / 'manifest.json'}")
+    print(f"Next: agni-pipeline run ... --analysis-date {last} --window-days {args.days}")
+    print("Data from NASA FIRMS; credit FIRMS wherever results are shown.")
+    return 0
+
+
+def _cmd_prepare_boundaries(args) -> int:
+    prepared = prepare_boundary(
+        args.input, args.output, field=args.field, value=args.value, label_field=args.label_field
+    )
+    print(f"{prepared.path}: {prepared.features} feature(s) where {args.field} == {args.value!r}, "
+          f"reprojected {prepared.source_crs} -> EPSG:4326")
+    if args.kind == "state":
+        region = load_region(prepared.path)
+        print(f"  area {region.area_km2:,.0f} km2")
+        for warning in region.warnings:
+            print(f"WARNING: {warning}")
+    else:
+        print(f"  {len(prepared.values)} {args.label_field} value(s): {', '.join(prepared.values)}")
+        if args.expect_count is not None and len(prepared.values) != args.expect_count:
+            print(f"WARNING: expected {args.expect_count} districts, found {len(prepared.values)}; the source may "
+                  "predate a boundary change. Areas of missing districts are counted under their parent district.")
+        if args.state:
+            for warning in load_districts(prepared.path, args.label_field, load_region(args.state)).warnings:
+                print(f"WARNING: {warning}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agni-pipeline",
@@ -175,6 +231,30 @@ def build_parser() -> argparse.ArgumentParser:
                      help="do not require the provenance metadata member (for third-party files)")
     val.add_argument("--no-envelope-check", action="store_true", help="skip the Punjab coordinate-envelope check")
     val.set_defaults(func=_cmd_validate)
+
+    fetch = sub.add_parser("fetch-firms", help="download VIIRS detections from the NASA FIRMS Area API")
+    fetch.add_argument("--output-dir", type=Path, required=True, help="folder for <SOURCE>.csv files and manifest.json")
+    fetch.add_argument("--boundary", type=Path, metavar="GEOJSON", help="WGS84 state boundary; the request bbox is derived from it")
+    fetch.add_argument("--bbox", metavar="W,S,E,N", help="explicit bounding box instead of --boundary")
+    fetch.add_argument("--days", type=int, default=MAX_DAY_RANGE, help=f"day range 1-{MAX_DAY_RANGE} (default {MAX_DAY_RANGE})")
+    fetch.add_argument("--start-date", type=_date, metavar="YYYY-MM-DD",
+                       help="first UTC day to fetch; without it the range ends today")
+    fetch.add_argument("--source", action="append", choices=VALID_SOURCES,
+                       help="FIRMS source (repeatable; default: the three VIIRS NRT sources)")
+    fetch.add_argument("--env-file", type=Path, default=DEFAULT_ENV_FILE,
+                       help="file holding FIRMS_MAP_KEY=... if the variable is not set (default: repo .env.local)")
+    fetch.set_defaults(func=_cmd_fetch_firms)
+
+    prep = sub.add_parser("prepare-boundaries", help="extract and reproject an authoritative boundary file to WGS84")
+    prep.add_argument("input", type=Path, help="boundary GeoJSON, or a .zip containing exactly one")
+    prep.add_argument("--output", type=Path, required=True, help="WGS84 GeoJSON to write")
+    prep.add_argument("--kind", choices=("state", "districts"), required=True)
+    prep.add_argument("--field", default="stcode", help="property to filter on (default: stcode)")
+    prep.add_argument("--value", required=True, help='value to keep, e.g. "03" for Punjab in Survey of India files')
+    prep.add_argument("--label-field", default="district", help="district name property (default: district)")
+    prep.add_argument("--expect-count", type=int, help="warn if the number of districts differs")
+    prep.add_argument("--state", type=Path, metavar="GEOJSON", help="prepared state boundary, to check district coverage")
+    prep.set_defaults(func=_cmd_prepare_boundaries)
     return parser
 
 
