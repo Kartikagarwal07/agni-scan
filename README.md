@@ -17,6 +17,10 @@
 
 AGNI-SCAN is a transparent verification-priority dashboard for possible crop-residue burning in Punjab. It does **not** claim that a satellite detection proves burning. Instead, it helps field teams decide **which 5 km grid cell to verify first**, explains why, and records what inspectors find.
 
+![Actual AGNI-SCAN dashboard showing Punjab's 2,256-cell verification-priority grid: 54 high, 187 medium, 2,015 low, and zero unknown cells.](docs/assets/dashboard-cell-grid.jpg)
+
+*Actual website snapshot · 5 km grid · analysis window: 23–26 October 2026 (UTC). Colours show verification priority; cropland only breaks ties between equal-scoring cells with fire evidence. Sources: NASA FIRMS VIIRS, ESA WorldCover 2021 v200 (general cropland, CC BY 4.0), and Survey of India / NWIC boundaries. This is a saved snapshot; the interactive dashboard can change with its configured dataset.*
+
 > [!IMPORTANT]
 > AGNI-SCAN is designed to improve **where humans look next**. It never presents a satellite anomaly as proof of crop-residue burning.
 
