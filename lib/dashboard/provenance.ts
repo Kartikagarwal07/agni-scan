@@ -11,6 +11,8 @@ export type Provenance = {
   source: string | null;
   analysisWindow: string | null;
   notices: string[];
+  /** Credits for the real data sources used (metadata.attribution); empty for synthetic data. */
+  credits: string[];
 };
 
 const SYNTHETIC = "SYNTHETIC_DEMONSTRATION_NOT_REAL_SATELLITE_DATA";
@@ -51,5 +53,6 @@ export function readProvenance(metadata: Record<string, unknown> | null | undefi
     source,
     analysisWindow: start && end ? `${start} to ${end}` : null,
     notices: [...strings(meta.contract_deviations), ...strings(meta.warnings)],
+    credits: strings(meta.attribution),
   };
 }

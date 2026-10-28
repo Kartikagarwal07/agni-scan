@@ -6,6 +6,7 @@
     "synthetic": true,
     "disclaimer": "SYNTHETIC DEMONSTRATION OUTPUT. Generated from fabricated test fixtures. These are NOT real satellite observations, NOT real Punjab boundaries and NOT real district data. Do not use for enforcement, reporting or any operational decision.",
     "interpretation": "risk_score is a heuristic verification-priority score for scheduling field checks; it is NOT a probability of burning or of undetected fire. observed_fire_count counts satellite detections only. Zero detections do not prove zero burning: cloud or smoke cover, overpass timing and small or short-lived fires all cause missed detections, so low priority does not prove no burning. risk_score is null (risk_level 'unknown') when the available evidence is insufficient.",
+    "attribution": [],
     "generated_at": null,
     "deterministic": true,
     "pipeline": {

@@ -98,17 +98,22 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) and select **Dashboard**.
 
-The committed default is a clearly labelled synthetic demonstration dataset, so the repository runs safely without private data.
+`npm run dev` serves the committed, clearly labelled synthetic demonstration dataset by default, so the repository runs without real data. Production builds (`next build`, Vercel) serve the published real grid set in `.env.production`.
 
-## Use a reviewed local real grid
+## Real Punjab grid
 
-Keep processed real output outside Git and set this in `.env.local`:
+The deployed site serves one published, processed grid: `data-pipeline/output/real/risk_grid.geojson`. It covers 2,256 cells of 5 km, with NASA FIRMS VIIRS detections for 2026-10-23 to 2026-10-26, history from 2023 to 2025, and cropland as a tie-break. Its `metadata` records every input file hash and the data credits, which the dashboard shows. Only this one output is committed; raw FIRMS files, WorldCover tiles, boundaries and other outputs stay local (see `data-pipeline/README.md`).
 
-```text
-AGNI_GRID_PATH=data-pipeline/output/real/risk_grid.geojson
-```
+- **Deployment.** `.env.production` sets `AGNI_GRID_PATH` to that file, and `next.config.ts` ships it with the API routes. A value set in the hosting provider overrides it.
+- **Local.** Set the same line in `.env.local` to use the real grid with `npm run dev`, or point it at any other contract-valid grid:
 
-The API validates the selected GeoJSON against the shared data contract before it is served. Remove the setting to return to the synthetic demonstration grid.
+  ```text
+  AGNI_GRID_PATH=data-pipeline/output/real/risk_grid.geojson
+  ```
+
+- **Updating it.** Re-run the pipeline into `data-pipeline/output/real/` and commit only `risk_grid.geojson`.
+
+The API validates the selected GeoJSON against the shared data contract before serving it. Without the setting, it serves the synthetic demonstration grid.
 
 ## Persistent field inspections
 
