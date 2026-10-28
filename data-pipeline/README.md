@@ -119,7 +119,9 @@ the historical component.
 ## 4. Running on real data
 
 Real inputs and results live in `data-pipeline\data\` and `data-pipeline\output\`. Both are
-git-ignored, so real data never reaches GitHub.
+git-ignored, so raw data never reaches GitHub. The one exception is
+`output\real\risk_grid.geojson`: the processed grid the deployed site serves. Write a reviewed run there
+(`--output-dir output\real`) and commit only that file. Its companion CSVs stay ignored.
 
 ### 4.1 One command (reproducible)
 
@@ -446,7 +448,7 @@ data-pipeline/
   scripts/real-data.ps1 one-command reproducible real-data run
   scripts/history-firms.ps1  historical SP seasons for --history-firms
   scripts/cropland.ps1  WorldCover cropland fraction for --cell-evidence
-  data/, output/        real inputs and results (git-ignored)
+  data/, output/        real inputs and results (git-ignored, except output/real/risk_grid.geojson)
   tests/                pytest suite
 ```
 

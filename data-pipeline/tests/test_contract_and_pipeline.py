@@ -160,6 +160,35 @@ def test_cropland_does_not_change_any_score(fixtures_dir):
     assert key(with_crop) == key(without)
 
 
+def test_synthetic_output_carries_no_data_credits(demo_result):
+    assert demo_result.metadata["attribution"] == []
+
+
+def test_attribution_credits_each_real_source(tmp_path):
+    from agni_pipeline.pipeline import FIRMS_CREDIT, _attribution
+
+    state = tmp_path / "state.geojson"
+    state.write_text(json.dumps({"type": "FeatureCollection", "source": {"src_agency": ["Survey of India (SOI)"]},
+                                 "features": []}), encoding="utf-8")
+    districts = tmp_path / "districts.geojson"
+    districts.write_text(json.dumps({"type": "FeatureCollection", "features": []}), encoding="utf-8")
+    evidence = tmp_path / "cropland.csv"
+    evidence.write_text("cell_id,cropland_fraction\n", encoding="utf-8")
+    (tmp_path / "cropland.csv.meta.json").write_text(json.dumps({
+        "layer": "cropland_fraction", "attribution": "(c) ESA WorldCover project", "product": "ESA WorldCover 10 m 2021 v200",
+        "licence": "CC BY 4.0", "source": "https://esa-worldcover.org"}), encoding="utf-8")
+    inp = PipelineInputs(firms_paths=[], boundary_path=state, districts_path=districts, cell_evidence_path=evidence,
+                         analysis_date=dt.date(2026, 10, 26))
+    assert _attribution(inp, synthetic=False) == [
+        FIRMS_CREDIT,
+        "State and district boundaries: Survey of India (SOI)",
+        "Cropland fraction: (c) ESA WorldCover project (ESA WorldCover 10 m 2021 v200, CC BY 4.0, https://esa-worldcover.org)",
+    ]
+    (tmp_path / "cropland.csv.meta.json").write_text("[]", encoding="utf-8")
+    assert _attribution(inp, synthetic=False) == [FIRMS_CREDIT, "State and district boundaries: Survey of India (SOI)"]
+    assert _attribution(inp, synthetic=True) == []
+
+
 def test_write_outputs(tmp_path, demo_result):
     paths = write_outputs(demo_result, tmp_path / "out")
     fc = json.loads(paths["geojson"].read_text(encoding="utf-8"))

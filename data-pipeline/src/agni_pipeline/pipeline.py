@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import datetime as dt
+import json
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -101,6 +102,48 @@ def _file_meta(res: FirmsLoadResult) -> dict:
         "synthetic": res.synthetic,
         "acq_date_range": [rng[0].isoformat(), rng[1].isoformat()] if rng else None,
     }
+
+
+FIRMS_CREDIT = "Fire detections: NASA FIRMS VIIRS 375 m active fire data (https://firms.modaps.eosdis.nasa.gov)"
+
+
+def _boundary_agencies(path: Path) -> list[str]:
+    """src_agency recorded by prepare-boundaries in the file's top-level "source" block, if any."""
+    try:
+        source = json.loads(path.read_text(encoding="utf-8-sig")).get("source")
+    except (OSError, ValueError, AttributeError):
+        return []
+    agencies = source.get("src_agency") if isinstance(source, dict) else None
+    return [a for a in agencies if isinstance(a, str)] if isinstance(agencies, list) else []
+
+
+def _evidence_credit(csv_path: Path) -> str | None:
+    """Credit line from the <csv>.meta.json written by prepare-cropland, if present."""
+    try:
+        meta = json.loads(csv_path.with_name(csv_path.name + ".meta.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(meta, dict) or not isinstance(meta.get("attribution"), str):
+        return None
+    parts = [meta["attribution"], meta.get("product"), meta.get("licence"), meta.get("source")]
+    label = str(meta.get("layer", "cell evidence")).replace("_", " ")
+    return f"{label.capitalize()}: {parts[0]} ({', '.join(str(x) for x in parts[1:] if x)})"
+
+
+def _attribution(inp: PipelineInputs, synthetic: bool) -> list[str]:
+    """Credits for every real data source used, for display wherever the grid is shown."""
+    if synthetic:
+        return []
+    credits = [FIRMS_CREDIT]
+    agencies = sorted(set(_boundary_agencies(inp.boundary_path)
+                          + (_boundary_agencies(inp.districts_path) if inp.districts_path else [])))
+    if agencies:
+        credits.append(f"State and district boundaries: {', '.join(agencies)}")
+    if inp.cell_evidence_path is not None:
+        credit = _evidence_credit(Path(inp.cell_evidence_path))
+        if credit:
+            credits.append(credit)
+    return credits
 
 
 def run_pipeline(inp: PipelineInputs) -> PipelineResult:
@@ -284,6 +327,7 @@ def run_pipeline(inp: PipelineInputs) -> PipelineResult:
         "synthetic": synthetic,
         "disclaimer": SYNTHETIC_DISCLAIMER if synthetic else OBSERVED_DISCLAIMER,
         "interpretation": INTERPRETATION,
+        "attribution": _attribution(inp, synthetic),
         "generated_at": None if inp.deterministic else dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "deterministic": inp.deterministic,
         "pipeline": {"name": "agni-pipeline", "version": __version__},
