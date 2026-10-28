@@ -29,6 +29,16 @@ export function ProvenanceBanner({ provenance }: { provenance: Provenance }) {
           </div>
         )}
       </dl>
+      {provenance.credits.length > 0 && (
+        <div className="ag-credits">
+          <p>Data credits</p>
+          <ul>
+            {provenance.credits.map((credit) => (
+              <li key={credit}>{credit}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {provenance.notices.length > 0 && (
         <ul className="ag-notices">
           {provenance.notices.map((notice) => (

@@ -3,6 +3,7 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 output/*
+# The one published, reviewed real grid that the deployed site serves (raw inputs stay out).
 !output/real/
 output/real/*
 !output/real/risk_grid.geojson

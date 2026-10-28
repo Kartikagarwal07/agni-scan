@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# Committed, non-secret: the example and the production grid path. Secrets stay in .env*.local.
+!.env.example
+!.env.production
 
 # vercel
 .vercel

@@ -102,6 +102,11 @@ test("provenance comes only from metadata and defaults to unknown", () => {
   });
   assert.equal(observed.kind, "observed");
   assert.deepEqual(observed.notices, ["d1", "w1"]);
+  assert.deepEqual(observed.credits, []);
+
+  assert.deepEqual(synthetic.credits, [], "synthetic demo data credits no real source");
+  const credited = readProvenance({ attribution: ["Fire detections: NASA FIRMS", "", 7, "Cropland: ESA WorldCover"] });
+  assert.deepEqual(credited.credits, ["Fire detections: NASA FIRMS", "Cropland: ESA WorldCover"]);
 });
 
 test("projection fits API polygons north-up into the viewBox", () => {
